@@ -1,0 +1,46 @@
+{
+    "model":{
+        "model_name": "Mask_RCNN_Resnet_50_FPN",
+        "pre_trained": true,
+        "trainable_layers": 5,
+        "num_classes": 1
+    },   
+    "dataset":{
+        "train":{
+            "dir": "datasets/sources/jersey_dataset_v4/train",
+            "json_dir": "datasets/sources/jersey_dataset_v4/train/train.json",
+            "batch_size": 1,
+            "shuffle": true,
+            "num_workers": 4
+        },
+        "val":{
+            "dir": "datasets/sources/jersey_dataset_v4/val",
+            "json_dir": "datasets/sources/jersey_dataset_v4/val/val.json",
+            "batch_size": 1,
+            "shuffle": false,
+            "num_workers": 4
+        },
+        "test":{
+            "dir": "datasets/sources/jersey_dataset_v4/test",
+            "json_dir": "datasets/sources/jersey_dataset_v4/test/test.json",
+            "batch_size": 1,
+            "shuffle": false,
+            "num_workers": 4
+        }
+    },
+    "optimizer":{
+        "opt_name": "Adam",
+        "opt_lr": 0.00005, 
+        "sched_name": "StepLR",
+        "sched_step": 50,
+        "sched_gamma": 0.1
+    },
+    "loop":{
+        "train": true,
+        "test": false,
+        "start_epoch": 0, 
+        "end_epochs": 80
+    },
+    "logging":{
+    }
+}
