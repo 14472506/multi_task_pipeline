@@ -2,7 +2,7 @@
 Details
 """
 # imports
-from loops import MainLoop
+from pipeline_loops import MainLoop
 import json
 
 # init experiment list

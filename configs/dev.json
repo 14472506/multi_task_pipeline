@@ -39,8 +39,10 @@
         "train": true,
         "test": false,
         "start_epoch": 0, 
-        "end_epochs": 80
+        "end_epochs": 80,
+        "loop_type": "instance"
     },
     "logging":{
+        "logger": "base_logger"
     }
 }
