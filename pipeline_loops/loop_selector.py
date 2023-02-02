@@ -1,10 +1,10 @@
 """
 Details
 """
-# impori
-from .instance_loops import training_loop, val_loop, test_loop
-
-# class
+# imports
+from .instance_loops import (inst_train_loop, 
+                             inst_val_loop,
+                             inst_test_loop)
 class LoopSelector():
     """
     Details
@@ -18,17 +18,17 @@ class LoopSelector():
     def get_train(self):
 
         if self.cfg["loop_type"] == "instance":
-            return training_loop
+            return inst_train_loop
 
     def get_val(self):
 
         if self.cfg["loop_type"] == "instance":
-            return val_loop
+            return inst_val_loop
 
     def get_test(self):
 
         if self.cfg["loop_type"] == "instance": 
-            return test_loop
+            return inst_test_loop
 
     
 

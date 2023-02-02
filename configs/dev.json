@@ -3,7 +3,7 @@
         "model_name": "Mask_RCNN_Resnet_50_FPN",
         "pre_trained": true,
         "trainable_layers": 5,
-        "num_classes": 1
+        "num_classes": 2
     },   
     "dataset":{
         "train":{

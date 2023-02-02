@@ -22,6 +22,7 @@ class MainLoop():
         
         # model
         self.model = ModelBuilder(cfg["model"]).model_builder()
+        self.model.to("cuda:1")
         
         # optimizer and scheduler
         self.optimizer = OptimiserSelector(cfg["optimizer"], self.model).get_optimizer()
@@ -46,7 +47,13 @@ class MainLoop():
             # loop 
             self.test_loop = LoopSelector(cfg["loop"]).get_test()
         
-        self.train_loop(3,2)
+    def train(self):
+        
+        for i in range(10):
+            self.train_loop(self.model, 
+                            self.train_loader,
+                            self.optimizer,
+                            "cuda:1")
 
 
 

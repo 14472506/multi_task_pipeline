@@ -17,6 +17,7 @@ for exp in exp_list:
 
     # setting up loop
     loop =  MainLoop(cfg)
+    loop.train()
 
     
     
