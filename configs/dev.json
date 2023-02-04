@@ -40,9 +40,12 @@
         "test": false,
         "start_epoch": 0, 
         "end_epochs": 80,
-        "loop_type": "instance"
+        "loop_type": "instance",
+        "device": "cuda:0"
     },
     "logging":{
-        "logger": "base_logger"
+        "logger": "base_instance_logger",
+        "path": "outputs/multi_task_dev/test_1",
+        "pth_name": "saver_test1_best.pth"
     }
 }

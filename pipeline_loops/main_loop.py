@@ -7,6 +7,7 @@ from optimizer import OptimiserSelector, SchedulerSelector
 from datasets import DataloaderBuilder
 from .loop_selector import LoopSelector
 from pipeline_logging import LogBuilder
+from utils import best_loss_saver, save_model, save_json
 
 # classes
 class MainLoop():
@@ -19,10 +20,11 @@ class MainLoop():
         """
         # config
         self.cfg = cfg
+        self.iter_count = 0
         
         # model
         self.model = ModelBuilder(cfg["model"]).model_builder()
-        self.model.to("cuda:1")
+        self.model.to(cfg["loop"]["device"])
         
         # optimizer and scheduler
         self.optimizer = OptimiserSelector(cfg["optimizer"], self.model).get_optimizer()
@@ -48,12 +50,61 @@ class MainLoop():
             self.test_loop = LoopSelector(cfg["loop"]).get_test()
         
     def train(self):
-        
-        for i in range(10):
-            self.train_loop(self.model, 
-                            self.train_loader,
-                            self.optimizer,
-                            "cuda:1")
+
+        save_json(self.cfg,
+                self.cfg["logging"]["path"],
+                "cfg.json")
+
+        for epoch in range(10):
+            
+            # record epoch
+            self.logger["epochs"].append(epoch)
+            
+            # training loop
+            print("================================================================================")
+            print(" [Epoch: %s]" %epoch)
+            print("================================================================================")
+            print(" --- Training ------------------------------------------------------------------")
+            
+            self.iter_count = self.train_loop(self.model, 
+                                    self.train_loader,
+                                    self.optimizer,
+                                    self.logger,
+                                    self.cfg["loop"]["device"],
+                                    self.iter_count,
+                                    epoch)
+            
+            print(" --- Validation ----------------------------------------------------------------")
+
+            # validation loop
+            self.val_loop(self.model,
+                    self.val_loader,
+                    self.logger,
+                    self.cfg["loop"]["device"],
+                    epoch)
+
+            # model saving
+            save_model(epoch, 
+                    self.model, 
+                    self.optimizer, 
+                    self.cfg["logging"]["path"], 
+                    "last_model.pth")
+
+            best_loss_saver(epoch,
+                    self.logger, 
+                    self.model,
+                    self.optimizer,
+                    self.cfg["logging"]["path"],
+                    self.cfg["logging"]["pth_name"])
+
+            save_json(self.logger,
+                    self.cfg["logging"]["path"],
+                    "log.json")
+
+                        
+            
+
+            
 
 
 
