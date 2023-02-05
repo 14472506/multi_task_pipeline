@@ -7,7 +7,7 @@ from optimizer import OptimiserSelector, SchedulerSelector
 from datasets import DataloaderBuilder
 from .loop_selector import LoopSelector
 from pipeline_logging import LogBuilder
-from utils import best_loss_saver, save_model, save_json
+from utils import best_loss_saver, save_model, save_json, schedule_loader
 
 # classes
 class MainLoop():
@@ -28,8 +28,10 @@ class MainLoop():
         
         # optimizer and scheduler
         self.optimizer = OptimiserSelector(cfg["optimizer"], self.model).get_optimizer()
+        self.scheduler = None
         if "sched_name" in cfg["optimizer"]:
             self.scheduler = SchedulerSelector(cfg["optimizer"], self.optimizer).get_scheduler()
+
     
         # init logger
         self.logger = LogBuilder(cfg["logging"]).get_logger()        
@@ -67,39 +69,52 @@ class MainLoop():
             print(" --- Training ------------------------------------------------------------------")
             
             self.iter_count = self.train_loop(self.model, 
-                                    self.train_loader,
-                                    self.optimizer,
-                                    self.logger,
-                                    self.cfg["loop"]["device"],
-                                    self.iter_count,
-                                    epoch)
+                self.train_loader,
+                self.optimizer,
+                self.logger,
+                self.cfg["loop"]["device"],
+                self.iter_count,
+                epoch)
             
             print(" --- Validation ----------------------------------------------------------------")
 
             # validation loop
             self.val_loop(self.model,
-                    self.val_loader,
-                    self.logger,
-                    self.cfg["loop"]["device"],
-                    epoch)
+                self.val_loader,
+                self.logger,
+                self.cfg["loop"]["device"],
+                epoch)
 
             # model saving
             save_model(epoch, 
-                    self.model, 
-                    self.optimizer, 
-                    self.cfg["logging"]["path"], 
-                    "last_model.pth")
+                self.model, 
+                self.optimizer, 
+                self.cfg["logging"]["path"], 
+                "last_model.pth")
 
             best_loss_saver(epoch,
-                    self.logger, 
-                    self.model,
-                    self.optimizer,
+                self.logger, 
+                self.model,
+                self.optimizer,
+                self.cfg["logging"]["path"],
+                self.cfg["logging"]["pth_name"])
+
+            # log saving
+            save_json(self.logger,
+                self.cfg["logging"]["path"],
+                "log.json")
+
+            if epoch == self.cfg["optimizer"]["sched_step"] -1:
+                schedule_loader(self.model,
                     self.cfg["logging"]["path"],
                     self.cfg["logging"]["pth_name"])
+            # this is going last
+            self.scheduler.step()
+            
 
-            save_json(self.logger,
-                    self.cfg["logging"]["path"],
-                    "log.json")
+        
+        
+
 
                         
             

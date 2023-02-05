@@ -32,7 +32,7 @@
         "opt_name": "Adam",
         "opt_lr": 0.00005, 
         "sched_name": "StepLR",
-        "sched_step": 50,
+        "sched_step": 2,
         "sched_gamma": 0.1
     },
     "loop":{
@@ -41,7 +41,8 @@
         "start_epoch": 0, 
         "end_epochs": 80,
         "loop_type": "instance",
-        "device": "cuda:0"
+        "device": "cuda:0",
+        "scheduler": true
     },
     "logging":{
         "logger": "base_instance_logger",
