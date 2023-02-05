@@ -7,7 +7,8 @@ from optimizer import OptimiserSelector, SchedulerSelector
 from datasets import DataloaderBuilder
 from .loop_selector import LoopSelector
 from pipeline_logging import LogBuilder
-from utils import best_loss_saver, save_model, save_json, schedule_loader
+from utils import best_loss_saver, save_model, save_json, schedule_loader, load_model
+from utils.coco_evaluation import evaluate
 
 # classes
 class MainLoop():
@@ -104,12 +105,45 @@ class MainLoop():
                 self.cfg["logging"]["path"],
                 "log.json")
 
-            if epoch == self.cfg["optimizer"]["sched_step"] -1:
-                schedule_loader(self.model,
-                    self.cfg["logging"]["path"],
-                    self.cfg["logging"]["pth_name"])
-            # this is going last
-            self.scheduler.step()
+            if "sched_name" in cfg["optimizer"]:
+                if epoch == self.cfg["optimizer"]["sched_step"] -1:
+                    schedule_loader(self.model,
+                        self.cfg["logging"]["path"],
+                        self.cfg["logging"]["pth_name"])
+                # this is going last
+                self.scheduler.step()
+
+    def test(self):
+
+        # load model
+        load_model(self.cfg["logging"]["path"],
+            self.cfg["logging"]["pth_name"],
+            self.model)
+
+        print("================================================================================")
+        print(" Evaluating")
+        print("================================================================================")
+        print(" --- Best Model ----------------------------------------------------------------")
+
+        self.test_loop(self.model, 
+            self.test_loader, 
+            self.cfg["loop"]["device"], 
+            self.cfg["logging"]["path"], 
+            train_flag=True)
+        
+        # if step scheduler is used
+        if "sched_name" in self.cfg["optimizer"]:
+            load_model(self.cfg["logging"]["path"],
+                self.cfg["logging"]["pth_name"],
+            self.model)
+
+            print(" --- Pre-Step Best Model -------------------------------------------------------")
+            self.test_loop(self.model,
+                self.test_loader, 
+                self.cfg["loop"]["device"], 
+                self.cfg["logging"]["path"], 
+                train_flag=True)
+            
             
 
         

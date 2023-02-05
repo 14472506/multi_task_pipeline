@@ -5,6 +5,7 @@ Detials
 import torch
 import gc
 from pipeline_logging import train_reporter, val_reporter
+from utils.coco_evaluation import evaluate
 
 # basic loops
 def inst_train_loop(model, loader, optimizer, logger, device ,iter_count, epoch):
@@ -71,5 +72,6 @@ def inst_val_loop(model, loader, logger, device, epoch):
     logger["val_loss"].append(loss)
     val_reporter(device, loss, epoch)
     
-def inst_test_loop(a, b):
-    print(a+b)
+def inst_test_loop(model, test_loader, device, exp_dir, train_flag=True):
+    mAP = evaluate(model, test_loader, device, exp_dir, train_flag)
+    print(mAP)

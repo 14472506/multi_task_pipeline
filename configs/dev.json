@@ -36,8 +36,8 @@
         "sched_gamma": 0.1
     },
     "loop":{
-        "train": true,
-        "test": false,
+        "train": false,
+        "test": true,
         "start_epoch": 0, 
         "end_epochs": 80,
         "loop_type": "instance",
