@@ -39,13 +39,13 @@
         "train": false,
         "test": true,
         "start_epoch": 0, 
-        "end_epochs": 80,
+        "end_epoch": 80,
         "loop_type": "instance",
         "device": "cuda:0",
         "scheduler": true
     },
     "logging":{
-        "logger": "base_instance_logger",
+        "logger": "base_logger",
         "path": "outputs/multi_task_dev/test_1",
         "pth_name": "saver_test1_best.pth"
     }

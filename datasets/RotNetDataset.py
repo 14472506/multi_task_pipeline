@@ -8,13 +8,16 @@ import numpy as np
 import torch
 import torch.utils.data as data
 from PIL import Image
+from utils import basic_square_crop, resize
+import torchvision.transforms as torch_trans
+import torch.nn.functional as torch_fun
 
 # class
 class RotNetDataset(data.Dataset):
     """
     Detials
     """
-    def __init__(self, root, seed=42):
+    def __init__(self, root, num_rotations, seed=42):
 
         # retrieveing image data from root directory
         self.root = os.path.expanduser(root)

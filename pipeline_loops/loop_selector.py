@@ -5,6 +5,10 @@ Details
 from .instance_loops import (inst_train_loop, 
                              inst_val_loop,
                              inst_test_loop)
+from .classification_loops import(class_train_loop,
+                                  class_val_loop,
+                                  class_test_loop)
+
 class LoopSelector():
     """
     Details
@@ -19,11 +23,15 @@ class LoopSelector():
 
         if self.cfg["loop_type"] == "instance":
             return inst_train_loop
+        if self.cfg["loop_type"] == "classification":
+            return class_train_loop
 
     def get_val(self):
 
         if self.cfg["loop_type"] == "instance":
             return inst_val_loop
+        if self.cfg["loop_type"] == "classification":
+            return class_val_loop
 
     def get_test(self):
 

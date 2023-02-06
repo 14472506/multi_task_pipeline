@@ -1,0 +1,50 @@
+{
+    "model":{
+        "model_name": "RotNet_ResNet_50",
+        "backbone_type": "pre-trained",
+        "num_rotations": 4,
+        "drop_out": 0.2,
+        "batch_norm": false
+    },   
+    "dataset":{
+        "dir": "datasets/sources/jersey_royals_ssl_ds",
+        "train_test_split": 0.8,
+        "train_val_split": 0.8,
+        "train":{
+            "batch_size": 4,
+            "shuffle": true,
+            "num_workers": 4
+        },
+        "val":{
+            "batch_size": 1,
+            "shuffle": false,
+            "num_workers": 4
+        },
+        "test":{
+            "batch_size": 1,
+            "shuffle": false,
+            "num_workers": 4
+        }
+    },
+    "optimizer":{
+        "opt_name": "Adam",
+        "opt_lr": 0.00005, 
+        "sched_name": "StepLR",
+        "sched_step": 50,
+        "sched_gamma": 0.1
+    },
+    "loop":{
+        "train": true,
+        "test": false,
+        "start_epoch": 0, 
+        "end_epoch": 80,
+        "loop_type": "classification",
+        "device": "cuda:0",
+        "scheduler": true
+    },
+    "logging":{
+        "logger": "base_logger",
+        "path": "outputs/multi_task_dev/test_2",
+        "pth_name": "rotnet_test1_best.pth"
+    }
+}

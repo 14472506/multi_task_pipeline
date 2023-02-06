@@ -6,7 +6,7 @@ from pipeline_loops import MainLoop
 import json
 
 # init experiment list
-exp_list = ["./configs/dev.json"]
+exp_list = ["./configs/rotnet_dev_config.json"]
 
 
 # looping through list
@@ -17,8 +17,8 @@ for exp in exp_list:
 
     # setting up loop
     loop =  MainLoop(cfg)
-    #loop.train()
-    loop.test()
+    loop.train()
+    #loop.test()
 
 
     

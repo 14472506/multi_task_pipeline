@@ -19,11 +19,11 @@ class LogBuilder():
         """
         Details
         """
-        if self.cfg["logger"] == "base_instance_logger":
-            logger = self.base_instance_logger()
+        if self.cfg["logger"] == "base_logger":
+            logger = self.base_logger()
             return logger
 
-    def base_instance_logger(self):
+    def base_logger(self):
         """
         Details
         """

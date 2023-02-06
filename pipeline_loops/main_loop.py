@@ -40,15 +40,15 @@ class MainLoop():
         # data loader and loops
         if cfg["loop"]["train"]:
             # data loaders
-            self.train_loader = DataloaderBuilder(cfg["dataset"]["train"]).coco_loader()
-            self.val_loader = DataloaderBuilder(cfg["dataset"]["val"]).coco_loader()
+            self.train_loader = DataloaderBuilder(cfg, "train").loader()
+            self.val_loader = DataloaderBuilder(cfg, "val").loader()
             # loops
             self.train_loop = LoopSelector(cfg["loop"]).get_train()
             self.val_loop = LoopSelector(cfg["loop"]).get_val()
               
         if cfg["loop"]["test"]:
             # data laoder
-            self.test_loader = DataloaderBuilder(cfg["dataset"]["test"]).coco_loader()
+            self.test_loader = DataloaderBuilder(cfg, "test").loader()
             # loop 
             self.test_loop = LoopSelector(cfg["loop"]).get_test()
         
@@ -58,7 +58,7 @@ class MainLoop():
                 self.cfg["logging"]["path"],
                 "cfg.json")
 
-        for epoch in range(10):
+        for epoch in range(self.cfg["loop"]["start_epoch"], self.cfg["loop"]["end_epoch"]):
             
             # record epoch
             self.logger["epochs"].append(epoch)
@@ -105,7 +105,7 @@ class MainLoop():
                 self.cfg["logging"]["path"],
                 "log.json")
 
-            if "sched_name" in cfg["optimizer"]:
+            if "sched_name" in self.cfg["optimizer"]:
                 if epoch == self.cfg["optimizer"]["sched_step"] -1:
                     schedule_loader(self.model,
                         self.cfg["logging"]["path"],

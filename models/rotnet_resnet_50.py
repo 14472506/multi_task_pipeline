@@ -7,29 +7,30 @@ import torch.nn as nn
 import torch
 
 # class
-class RotNet(nn.Module):
+class RotNet_Resnet_50(nn.Module):
     """
     Detials
     """
-    def __init__(self, cfg, num_rotations=4, dropout_rate=0.5, batch_norm=True):
+    def __init__(self, cfg):
         """
         Detials
         """
-        self.backbone = self.backbone_selector(cfg["model"]["backbone"])
+        super().__init__()
+        self.backbone = self.backbone_selector(cfg["backbone_type"])
 
-        self.classifier = nn.Sequential(nn.Dropout() if dropout_rate > 0. else nn.Identity(),
-                                nn.Linear(1000, 4096, bias=False if batch_norm else True),
-                                nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
+        self.classifier = nn.Sequential(nn.Dropout() if cfg["drop_out"] > 0. else nn.Identity(),
+                                nn.Linear(1000, 4096, bias=False if cfg["batch_norm"] else True),
+                                nn.BatchNorm1d(4096) if cfg["batch_norm"] else nn.Identity(),
                                 nn.ReLU(inplace=True),
-                                nn.Dropout() if dropout_rate > 0. else nn.Identity(),
-                                nn.Linear(4096, 4096, bias=False if batch_norm else True),
-                                nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
+                                nn.Dropout() if cfg["drop_out"] > 0. else nn.Identity(),
+                                nn.Linear(4096, 4096, bias=False if cfg["batch_norm"] else True),
+                                nn.BatchNorm1d(4096) if cfg["batch_norm"] else nn.Identity(),
                                 nn.ReLU(inplace=True),
-                                nn.Dropout() if dropout_rate > 0. else nn.Identity(),
-                                nn.Linear(4096, 1000, bias=False if batch_norm else True),
-                                nn.BatchNorm1d(1000) if batch_norm else nn.Identity(),
+                                nn.Dropout() if cfg["drop_out"] > 0. else nn.Identity(),
+                                nn.Linear(4096, 1000, bias=False if cfg["batch_norm"] else True),
+                                nn.BatchNorm1d(1000) if cfg["batch_norm"] else nn.Identity(),
                                 nn.ReLU(inplace=True),
-                                nn.Linear(1000, num_rotations))
+                                nn.Linear(1000, cfg["num_rotations"]))
 
                 # Remove any potential nn.Identity() layers
         self.classifier = nn.Sequential(*[child for child in self.classifier.children() if not isinstance(child, nn.Identity)])

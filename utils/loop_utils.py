@@ -3,6 +3,7 @@ Details
 """
 # imports
 import torch
+import torch.nn.functional as F
 
 # functions
 def schedule_loader(model, path, pth_name):
@@ -26,3 +27,11 @@ def load_model(path, pth_name, model):
     load_path = path + "/" + pth_name
     checkpoint = torch.load(load_path)
     model.load_state_dict(checkpoint["state_dict"])
+
+# loss functions
+def classification_loss(y_hat, y):
+    """
+    Detials
+    """
+    loss = F.cross_entropy(y_hat, y)
+    return loss

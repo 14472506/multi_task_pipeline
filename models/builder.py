@@ -5,7 +5,7 @@ Details
 from .mask_rcnn_resnet_50_fpn import Mask_RCNN_Resnet_50_FPN
 from .rotnet_resnet_50 import RotNet_Resnet_50
 
-# model builder
+# model build
 class ModelBuilder():
     def __init__(self, cfg):
         self.cfg = cfg
