@@ -4,6 +4,7 @@ Details
 # imports
 import torch
 import torch.nn.functional as F
+import gc
 
 # functions
 def schedule_loader(model, path, pth_name):
@@ -35,3 +36,12 @@ def classification_loss(y_hat, y):
     """
     loss = F.cross_entropy(y_hat, y)
     return loss
+
+def garbage_collector():
+    """
+    Details
+    """
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.reset_max_memory_allocated()
+    torch.cuda.synchronize()

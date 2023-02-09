@@ -2,12 +2,14 @@
 Details
 """
 # imports
+import torch
 from models import ModelBuilder
 from optimizer import OptimiserSelector, SchedulerSelector
 from datasets import DataloaderBuilder
 from .loop_selector import LoopSelector
 from pipeline_logging import LogBuilder
-from utils import best_loss_saver, save_model, save_json, schedule_loader, load_model
+from utils import (best_loss_saver, save_model, save_json,
+                schedule_loader, load_model, garbage_collector)
 from utils.coco_evaluation import evaluate
 
 # classes
@@ -32,6 +34,7 @@ class MainLoop():
         self.scheduler = None
         if "sched_name" in cfg["optimizer"]:
             self.scheduler = SchedulerSelector(cfg["optimizer"], self.optimizer).get_scheduler()
+        self.scaler = torch.cuda.amp.GradScaler(enabled=cfg["loop"]["amp"])
 
     
         # init logger
@@ -72,19 +75,25 @@ class MainLoop():
             self.iter_count = self.train_loop(self.model, 
                 self.train_loader,
                 self.optimizer,
+                self.scaler,
                 self.logger,
                 self.cfg["loop"]["device"],
                 self.iter_count,
                 epoch)
+
+            garbage_collector()
             
             print(" --- Validation ----------------------------------------------------------------")
 
             # validation loop
             self.val_loop(self.model,
-                self.val_loader,
+                self.val_loader,                
+                self.scaler,
                 self.logger,
                 self.cfg["loop"]["device"],
                 epoch)
+
+            garbage_collector()
 
             # model saving
             save_model(epoch, 
@@ -113,6 +122,8 @@ class MainLoop():
                 # this is going last
                 self.scheduler.step()
 
+            garbage_collector()
+
     def test(self):
 
         # load model
@@ -130,12 +141,14 @@ class MainLoop():
             self.cfg["loop"]["device"], 
             self.cfg["logging"]["path"], 
             train_flag=True)
+
+        garbage_collector()
         
         # if step scheduler is used
         if "sched_name" in self.cfg["optimizer"]:
             load_model(self.cfg["logging"]["path"],
-                self.cfg["logging"]["pth_name"],
-            self.model)
+                "/ps_" + self.cfg["logging"]["pth_name"],
+                self.model)
 
             print(" --- Pre-Step Best Model -------------------------------------------------------")
             self.test_loop(self.model,

@@ -32,7 +32,7 @@
         "opt_name": "Adam",
         "opt_lr": 0.00005, 
         "sched_name": "StepLR",
-        "sched_step": 2,
+        "sched_step": 50,
         "sched_gamma": 0.1
     },
     "loop":{
@@ -42,11 +42,12 @@
         "end_epoch": 80,
         "loop_type": "instance",
         "device": "cuda:0",
-        "scheduler": true
+        "scheduler": true,
+        "amp": true
     },
     "logging":{
         "logger": "base_logger",
-        "path": "outputs/multi_task_dev/test_1",
-        "pth_name": "saver_test1_best.pth"
+        "path": "outputs/multi_task_dev/test_3",
+        "pth_name": "mem_test_best.pth"
     }
 }

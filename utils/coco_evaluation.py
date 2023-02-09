@@ -23,11 +23,11 @@ import numpy as np
 from contextlib import redirect_stdout
 import time
 import json
-import gc
 
 # from packages
 import utils.coco_utils as utils
 from .coco_utils import convert_to_coco_api
+from .loop_utils import garbage_collector
 
 # ===========================
 # evaluate function and supporting functions
@@ -65,6 +65,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
         model_time = time.time()
 
         # getting predictions from model and loading them to gpu
+        #with torch.autocast(device_type="cuda", dtype=torch.float16):
         with torch.no_grad():
             outputs = model(images)
 
@@ -77,8 +78,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
         coco_evaluator.update(res)
         evaluator_time = time.time() - evaluator_time
 
-        gc.collect()
-        torch.cuda.empty_cache()
+        #garbage_collector()
     
     # sychronize processes?
     coco_evaluator.synchronize_between_processes()
