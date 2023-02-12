@@ -51,6 +51,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
     # preparing coco evaluator, providing coco formated dataset and a list of iou_types
     coco = convert_to_coco_api(data_loader.dataset)
     iou_types = _get_iou_types(model)
+    iou_types.append("segm") # ADDED TO MAKE THIS WORK !!!! 
     coco_evaluator = CocoEvaluator(save_path, coco, iou_types)
     
     # carrying out evaluation over dataset
@@ -65,9 +66,9 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
         model_time = time.time()
 
         # getting predictions from model and loading them to gpu
-        #with torch.autocast(device_type="cuda", dtype=torch.float16):
-        with torch.no_grad():
-            outputs = model(images)
+        with torch.autocast(device_type="cuda", dtype=torch.float16):
+            with torch.no_grad():
+                outputs = model(images)
 
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
 
@@ -78,7 +79,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
         coco_evaluator.update(res)
         evaluator_time = time.time() - evaluator_time
 
-        #garbage_collector()
+        garbage_collector()
     
     # sychronize processes?
     coco_evaluator.synchronize_between_processes()

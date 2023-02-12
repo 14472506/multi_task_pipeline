@@ -91,7 +91,8 @@ class MainLoop():
                 self.scaler,
                 self.logger,
                 self.cfg["loop"]["device"],
-                epoch)
+                epoch,
+                self.cfg["logging"]["path"])
 
             garbage_collector()
 

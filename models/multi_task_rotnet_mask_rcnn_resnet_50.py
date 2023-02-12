@@ -7,14 +7,14 @@ import torch.nn as nn
 import torchvision
 
 # model
-class Multi_Mask_RCNN(nn.Module):
+class Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN(nn.Module):
     """
     Detials
     """
     def __init__(self, cfg):
         super().__init__()
 
-        if cfg["model"]["pre_trained"]:
+        if cfg["backbone_type"] == "pre-trained":
             self.backbone = torchvision.models.detection.backbone_utils.resnet_fpn_backbone(
                 backbone_name="resnet50",
                 weights="ResNet50_Weights.DEFAULT",
@@ -30,7 +30,7 @@ class Multi_Mask_RCNN(nn.Module):
             num_classes=1)
 
         self.fc_layers = nn.Sequential(
-            nn.Linear(266240, 2048, bias=False),
+            nn.Linear(2097152, 2048, bias=False),
             nn.ReLU(inplace=True),
             nn.Linear(2048, 1000, bias=False)
         )
@@ -57,6 +57,10 @@ class Multi_Mask_RCNN(nn.Module):
             return(x)
         elif flag == "ss":
             x = self.Mask_RCNN.backbone.body(x)
+            print(x["0"].shape)
+            print(x["1"].shape)
+            print(x["2"].shape)
+            print(x["3"].shape)
             x = x["3"]
             x = torch.flatten(x, start_dim = 1)
             x = self.fc_layers(x)
@@ -67,9 +71,8 @@ class Multi_Mask_RCNN(nn.Module):
 # test
 if __name__ == "__main__":
 
-    model = Multi_Mask_RCNN({"model":{"pre_trained": True}})
-    print(model)
-    #model.train()
-    #x = [torch.rand(3, 400, 300), torch.rand(3, 400, 300)]
-    #pred = model("mask", x)
-    #print(pred)
+    model = Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN({"backbone_type": "pre-trained"})
+    model.train()
+    x = [torch.rand(3, 400, 300), torch.rand(3, 400, 400)]
+    pred = model("ss", torch.rand(3, 1000, 1000))
+    print(pred)

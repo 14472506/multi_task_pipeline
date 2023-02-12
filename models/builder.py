@@ -4,6 +4,7 @@ Details
 # imports
 from .mask_rcnn_resnet_50_fpn import Mask_RCNN_Resnet_50_FPN
 from .rotnet_resnet_50 import RotNet_Resnet_50
+from .multi_task_rotnet_mask_rcnn_resnet_50 import Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN
 
 # model build
 class ModelBuilder():
@@ -32,6 +33,9 @@ class ModelBuilder():
         # ================================================
         # Combined Multi-task Models
         # ================================================
+        if self.cfg["model_name"] == "Multi_task_RotNet_Mask_RCNN_Resnet50":
+            model = Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN(self.cfg)
+            return model
 
         
 
