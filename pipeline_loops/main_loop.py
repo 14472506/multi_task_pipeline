@@ -61,6 +61,7 @@ class MainLoop():
                 self.cfg["logging"]["path"],
                 "cfg.json")
 
+        best_loss = 100 # arbitraraly high
         for epoch in range(self.cfg["loop"]["start_epoch"], self.cfg["loop"]["end_epoch"]):
             
             # record epoch
@@ -103,23 +104,25 @@ class MainLoop():
                 self.cfg["logging"]["path"], 
                 "last_model.pth")
 
-            best_loss_saver(epoch,
+            best_loss = best_loss_saver(epoch,
                 self.logger, 
                 self.model,
                 self.optimizer,
                 self.cfg["logging"]["path"],
-                self.cfg["logging"]["pth_name"])
+                self.cfg["logging"]["pth_name"]m
+                best_loss)
 
             # log saving
             save_json(self.logger,
                 self.cfg["logging"]["path"],
-                "log.json")
+                "log.json")   
 
             if "sched_name" in self.cfg["optimizer"]:
                 if epoch == self.cfg["optimizer"]["sched_step"] -1:
                     schedule_loader(self.model,
                         self.cfg["logging"]["path"],
                         self.cfg["logging"]["pth_name"])
+                    best_loss = 100 # arbitrarally high
                 # this is going last
                 self.scheduler.step()
 

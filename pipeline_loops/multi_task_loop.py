@@ -49,13 +49,13 @@ def multi_train_loop(model, loader, optimizer, scaler, logger, device ,iter_coun
     for j, downsteam_data in enumerate(downstream_loader):
         
         # load data for loader
-        downsteam_images, downsteam_targets = downsteam_data
-        downsteam_images = list(downsteam_image.to(device) for downsteam_image in downsteam_images)
-        downsteam_targets = [{k: v.to(device) for k, v in t.items()} for t in downsteam_targets]
-        
+        downstream_images, downstream_targets = downsteam_data
+        downstream_images = list(downstream_image.to(device) for downstream_image in downstream_images)
+        downstream_targets = [{k: v.to(device) for k, v in t.items()} for t in downstream_targets]
+
         # get model output
         with torch.autocast(device_type='cuda', dtype=torch.float16):
-            downsteam_loss_dict = model("mask", downsteam_images, downsteam_targets)
+            downsteam_loss_dict = model("mask", downstream_images, downstream_targets)
             downsteam_losses = sum(loss for loss in downsteam_loss_dict.values())
 
         scaler.scale(downsteam_losses).backward()
@@ -102,7 +102,7 @@ def multi_val_loop(model, loader, scaler, logger, device, epoch, exp_dir):
         upstream_image, upstream_target = upstream_image.to(device), upstream_target.to(device)
 
         # forward
-        with torch.zero_grad():
+        with torch.no_grad():
             upstream_pred = model("ss", upstream_image)
             upstream_loss = criterion(upstream_pred, upstream_target)
 
@@ -122,7 +122,7 @@ def multi_val_loop(model, loader, scaler, logger, device, epoch, exp_dir):
                 downsteam_loss_dict = model("mask", downsteam_images, downsteam_targets)
                 downsteam_losses = sum(loss for loss in downsteam_loss_dict.values())
 
-        loop_loss_acc += losses.item()
+        loop_loss_acc += downsteam_losses.item()
 
         garbage_collector()
 
@@ -137,10 +137,11 @@ def multi_val_loop(model, loader, scaler, logger, device, epoch, exp_dir):
     ssl_loss = ssl_loop_loss_acc/len(upstream_loader)
     logger["val_loss"].append(loss)
     logger["ssl_val_loss"].append(ssl_loss)
-    print(ssl_loss)
+    print("SSL Loss: ", ssl_loss)
     val_reporter(device, loss, epoch)
     
-def multi_test_loop(model, test_loader, device, exp_dir, train_flag=True):
+def multi_test_loop(model, loader, device, exp_dir, train_flag=True):
     garbage_collector()
+    test_loader = loader[0]
     mAP = evaluate(model, test_loader, device, exp_dir, train_flag)
     print(mAP)

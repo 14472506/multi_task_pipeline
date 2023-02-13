@@ -68,7 +68,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
         # getting predictions from model and loading them to gpu
         with torch.autocast(device_type="cuda", dtype=torch.float16):
             with torch.no_grad():
-                outputs = model(images)
+                outputs = model("mask", images)
 
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
 

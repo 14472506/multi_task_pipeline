@@ -7,7 +7,7 @@ from utils import classification_loss as criterion
 from pipeline_logging import train_reporter, val_reporter
 
 # functions 
-def class_train_loop(model, loader, optimizer, logger, device ,iter_count, epoch):
+def class_train_loop(model, loader, optimizer, scaler, logger, device ,iter_count, epoch):
     """
     Detials
     """

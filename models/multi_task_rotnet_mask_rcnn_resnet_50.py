@@ -27,11 +27,13 @@ class Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN(nn.Module):
 
         self.Mask_RCNN = torchvision.models.detection.MaskRCNN(
             self.backbone,
-            num_classes=1)
+            num_classes=2)
+
+        self.avg_pooling = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1))
+        )
 
         self.fc_layers = nn.Sequential(
-            nn.Linear(2097152, 2048, bias=False),
-            nn.ReLU(inplace=True),
             nn.Linear(2048, 1000, bias=False)
         )
 
@@ -53,15 +55,12 @@ class Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN(nn.Module):
     def forward(self, flag, x, y=None):
 
         if flag == "mask":
-            x = self.Mask_RCNN(x)
+            x = self.Mask_RCNN(x, y)
             return(x)
         elif flag == "ss":
             x = self.Mask_RCNN.backbone.body(x)
-            print(x["0"].shape)
-            print(x["1"].shape)
-            print(x["2"].shape)
-            print(x["3"].shape)
             x = x["3"]
+            x = self.avg_pooling(x)
             x = torch.flatten(x, start_dim = 1)
             x = self.fc_layers(x)
             x = self.rot_classifier(x)

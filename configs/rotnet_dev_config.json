@@ -40,7 +40,8 @@
         "end_epoch": 80,
         "loop_type": "classification",
         "device": "cuda:0",
-        "scheduler": true
+        "scheduler": true,
+        "amp": false
     },
     "logging":{
         "logger": "base_logger",

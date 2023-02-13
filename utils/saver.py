@@ -18,20 +18,16 @@ def make_dir(path):
         if e.errno != errno.EEXIST:
             raise
 
-def best_loss_saver(epoch, logger, model, optimizer, path, pth_name):
+def best_loss_saver(epoch, logger, model, optimizer, path, pth_name, best_loss):
     """
     Detials
     """
-    # if model is first model
-    if logger["epochs"][-1] == 0:
+    if logger["val_loss"][-1] < best_loss:
         save_model(epoch, model, optimizer, path, pth_name)
         logger["best_val"].append(logger["val_loss"][-1])
         logger["best_epoch"].append(logger["epochs"][-1])
-
-    if logger["val_loss"][-1] < logger["best_val"][-1]:
-        save_model(epoch, model, optimizer, path, pth_name)
-        logger["best_val"].append(logger["val_loss"][-1])
-        logger["best_epoch"].append(logger["epochs"][-1])
+        best_loss = logger["val_loss"][-1]
+    return best_loss
 
 def save_model(epoch, model, optimizer, path, pth_name):
 
