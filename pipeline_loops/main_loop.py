@@ -109,7 +109,7 @@ class MainLoop():
                 self.model,
                 self.optimizer,
                 self.cfg["logging"]["path"],
-                self.cfg["logging"]["pth_name"]m
+                self.cfg["logging"]["pth_name"],
                 best_loss)
 
             # log saving

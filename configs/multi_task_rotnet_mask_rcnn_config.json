@@ -16,7 +16,7 @@
             "dir": "datasets/sources/jersey_dataset_v4/train",
             "json_dir": "datasets/sources/jersey_dataset_v4/train/train.json",
             "batch_size": 1,
-            "batch_size_ssl": 1,
+            "batch_size_ssl": 4,
             "shuffle": true,
             "num_workers": 4
         },
@@ -56,7 +56,7 @@
     },
     "logging":{
         "logger": "multi_task_logger",
-        "path": "outputs/multi_task_dev/test_4",
+        "path": "outputs/multi_task_dev/test_5",
         "pth_name": "multi_task_best.pth"
     }
 }
