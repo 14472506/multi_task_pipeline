@@ -18,7 +18,7 @@
             "batch_size": 1,
             "batch_size_ssl": 4,
             "shuffle": true,
-            "num_workers": 4
+            "num_workers": 0
         },
         "val":{
             "dir": "datasets/sources/jersey_dataset_v4/val",
@@ -26,7 +26,7 @@
             "batch_size": 1,
             "batch_size_ssl": 1,
             "shuffle": false,
-            "num_workers": 4
+            "num_workers": 0
         },
         "test":{
             "dir": "datasets/sources/jersey_dataset_v4/test",
@@ -34,7 +34,7 @@
             "batch_size": 1,
             "batch_size_ssl": 1,
             "shuffle": false,
-            "num_workers": 4
+            "num_workers": 0
         }
     },
     "optimizer":{
@@ -51,7 +51,7 @@
         "end_epoch": 80,
         "loop_type": "multi_task",
         "device": "cuda:0",
-        "scheduler": true,
+        "scheduler": false,
         "amp": true
     },
     "logging":{
