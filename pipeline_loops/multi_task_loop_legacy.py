@@ -10,58 +10,21 @@ from utils.coco_evaluation import evaluate
 from utils import garbage_collector
 
 # basic loops
-def multi_train_loop(model, loaders, optimizer, scaler, logger, device ,iter_count, epoch):
+def multi_train_loop(model, loader, optimizer, scaler, logger, device ,iter_count, epoch):
     """
     Details
     """
     # set model to train
     model.train()
 
-    # seperating dataloaders from loader
-    loader = loaders[0]
-    ssl_loader = loaders[1]
+    # init loop counters
+    ssl_loop_loss_acc = 0
+    loop_loss_acc = 0
 
-    # getting length of loaders for epoch itteration
-    epoch_len = len(loader)#len(ssl_loader) + len(loader)
+    downstream_loader = loader[0]
+    upstream_loader = loader[1]
 
-    # setting up iter for data loaders
-    iterator = iter(loader)
-    ssl_iterator = iter(ssl_loader) 
-
-    # enter epoch loop
-    for i in range(epoch_len):
-        
-        # ===== Instance and ssl ===== #
-        # extract data from current loader and sending it to davice
-        inst_img, inst_targ, rot_img, rot_targ = next(iterator)
-        inst_img = list(im.to(device) for im in inst_img)
-        inst_targ = [{k: v.to(device) for k, v in t.items()} for t in inst_targ]
-        rot_img = torch.stack(list(im.to(device) for im in rot_img))
-        rot_targ = torch.stack(list(im.to(device) for im in rot_targ))
-
-        # carrying out forward pass
-        with torch.autocast(device_type='cuda', dtype=torch.float16):
-            ssl_pred, loss_dict = model(rot_img, inst_img, inst_targ)
-            ssl_loss = criterion(ssl_pred[0], rot_targ[0])
-            losses = sum(loss for loss in loss_dict.values())
-            total_loss = ssl_loss + losses
-
-        # backwards and optimizer step
-        scaler.scale(total_loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
-
-        # setting optimizer to zero grad
-        optimizer.zero_grad()
-
-        # Test Reporting
-        train_reporter(iter_count, device, total_loss.item(), epoch)
-        iter_count += 1
-
-        garbage_collector()
-
-        # SSL SECTION STARTS HERE !!!
-        #ssl_img, ssl_targ = next(ssl_iterator)
+#    for i, upstream_data in enumerate(upstream_loader):
 #
 #        # extact data 
 #        upstream_image, upstream_target = upstream_data
@@ -82,19 +45,43 @@ def multi_train_loop(model, loaders, optimizer, scaler, logger, device ,iter_cou
 #        train_reporter(iter_count, device, upstream_loss.item(), epoch)
 #        iter_count += 1
 
-
-
+    # enter loader loop
+    for j, downsteam_data in enumerate(downstream_loader):
         
+        # load data for loader
+        downstream_images, downstream_targets, downstream_rot, downstream_rot_res = downsteam_data
+        downstream_images = list(downstream_image.to(device) for downstream_image in downstream_images)
+        downstream_targets = [{k: v.to(device) for k, v in t.items()} for t in downstream_targets]
+
+
+        print(downstream_rot)
+        print(downstream_rot_res)
+
+        # get model output
+        with torch.autocast(device_type='cuda', dtype=torch.float16):
+            downsteam_loss_dict = model("mask", downstream_images, downstream_targets)
+            downsteam_losses = sum(loss for loss in downsteam_loss_dict.values())
+
+        scaler.scale(downsteam_losses).backward()
+        #
+        #scaler.unscale_(optimizer)
+        #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+        scaler.step(optimizer)
+        scaler.update()
+        
+        #losses.backward()
+        #optimizer.step()
+        optimizer.zero_grad()
         
         # reporting
-        #loop_loss_acc += downsteam_losses.item()
-        #train_reporter(iter_count, device, downsteam_losses.item(), epoch)
-        #iter_count += 1
+        loop_loss_acc += downsteam_losses.item()
+        train_reporter(iter_count, device, downsteam_losses.item(), epoch)
+        iter_count += 1
 
-        #garbage_collector()
+        garbage_collector()
 
-    #logger["ssl_train_loss"].append(ssl_loop_loss_acc/len(upstream_loader))
-    #logger["train_loss"].append(loop_loss_acc/len(downstream_loader))
+    logger["ssl_train_loss"].append(ssl_loop_loss_acc/len(upstream_loader))
+    logger["train_loss"].append(loop_loss_acc/len(downstream_loader))
     
     return iter_count
 

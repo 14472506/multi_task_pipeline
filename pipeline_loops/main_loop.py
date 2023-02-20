@@ -86,14 +86,14 @@ class MainLoop():
             
             print(" --- Validation ----------------------------------------------------------------")
 
-            # validation loop
-            self.val_loop(self.model,
-                self.val_loader,                
-                self.scaler,
-                self.logger,
-                self.cfg["loop"]["device"],
-                epoch,
-                self.cfg["logging"]["path"])
+            ## validation loop
+            #self.val_loop(self.model,
+            #    self.val_loader,                
+            #    self.scaler,
+            #    self.logger,
+            #    self.cfg["loop"]["device"],
+            #    epoch,
+            #    self.cfg["logging"]["path"])
 
             garbage_collector()
 
@@ -104,26 +104,26 @@ class MainLoop():
                 self.cfg["logging"]["path"], 
                 "last_model.pth")
 
-            best_loss = best_loss_saver(epoch,
-                self.logger, 
-                self.model,
-                self.optimizer,
-                self.cfg["logging"]["path"],
-                self.cfg["logging"]["pth_name"],
-                best_loss)
+            #best_loss = best_loss_saver(epoch,
+            #    self.logger, 
+            #    self.model,
+            #    self.optimizer,
+            #    self.cfg["logging"]["path"],
+            #    self.cfg["logging"]["pth_name"],
+            #    best_loss)
 
             # log saving
-            save_json(self.logger,
-                self.cfg["logging"]["path"],
-                "log.json")   
+            #save_json(self.logger,
+            #    self.cfg["logging"]["path"],
+            #    "log.json")   
 
             if "sched_name" in self.cfg["optimizer"]:
-                if epoch == self.cfg["optimizer"]["sched_step"] -1:
-                    schedule_loader(self.model,
-                        self.cfg["logging"]["path"],
-                        self.cfg["logging"]["pth_name"])
-                    best_loss = 100 # arbitrarally high
-                # this is going last
+                #if epoch == self.cfg["optimizer"]["sched_step"] -1:
+                #    schedule_loader(self.model,
+                #        self.cfg["logging"]["path"],
+                #        self.cfg["logging"]["pth_name"])
+                #    best_loss = 100 # arbitrarally high
+                ## this is going last
                 self.scheduler.step()
 
             garbage_collector()

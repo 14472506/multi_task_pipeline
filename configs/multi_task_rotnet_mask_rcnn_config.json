@@ -45,13 +45,13 @@
         "sched_gamma": 0.1
     },
     "loop":{
-        "train": false,
-        "test": true,
+        "train": true,
+        "test": false,
         "start_epoch": 0, 
         "end_epoch": 80,
         "loop_type": "multi_task",
         "device": "cuda:0",
-        "scheduler": false,
+        "scheduler": true,
         "amp": true
     },
     "logging":{
