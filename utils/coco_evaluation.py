@@ -55,7 +55,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
     coco_evaluator = CocoEvaluator(save_path, coco, iou_types)
     
     # carrying out evaluation over dataset
-    for images, targets in data_loader:
+    for images, targets, something, something_else in data_loader:
         # as with training loop address this is in the collate function
 
         images = list(img.to(device) for img in images)
@@ -68,7 +68,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
         # getting predictions from model and loading them to gpu
         with torch.autocast(device_type="cuda", dtype=torch.float16):
             with torch.no_grad():
-                outputs = model("mask", images)
+                outputs = model(images)
 
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
 

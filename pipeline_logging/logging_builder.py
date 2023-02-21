@@ -48,6 +48,9 @@ class LogBuilder():
             "val_loss": [],
             "ssl_train_loss": [],
             "ssl_val_loss": [],
+            "mAP": [],
+            "best_mAP": [],
+            "best_mAP_epoch": [],
             "epochs": [],
             "best_val": [],
             "best_epoch": []
