@@ -28,18 +28,15 @@ class Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN(nn.Module):
                 backbone_name="resnet50",
                 weights=False,
                 trainable_layers=5)
+        
         # ad if else here for loading other kind of backbone weights
-
-        self.rotnet_backbone = torchvision.models.resnet50(
-                weights="ResNet50_Weights.DEFAULT")
-
-        self.rotnet_backbone.load_state_dict(self.mask_rcnn_backbone.body.state_dict(), strict=False)
+        # Dropout experiment
+        #self.mask_rcnn_backbone.body.fc.register_forward_hook(lambda m, inp, out: F.dropout(out, p=0.5, training=m.training))
 
         # Mask R-CNN
         self.Mask_RCNN = Mask_RCNN(self.mask_rcnn_backbone, 2)
-
         # RotNet
-        self.RotNet = RotNet(self.rotnet_backbone)
+        self.RotNet = RotNet(self.mask_rcnn_backbone.body)
         
     def forward(self, rot_x, mask_x=None, target=None):
         """
@@ -89,7 +86,14 @@ class RotNet(nn.Module):
     """
     def __init__(self, backbone):
         super().__init__()
-        self.backbone = backbone
+        # for backbone
+        self.fpn_backbone = backbone
+        self.avg_pooling = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)))
+        self.fc_layers = nn.Sequential(
+            nn.Linear(2048, 1000, bias=False))
+
+        # for classifier
         self.rotnet_classifier = nn.Sequential(
             nn.Dropout() if 0.5 > 0. else nn.Identity(),
             nn.Linear(1000, 4096, bias=False),
@@ -105,12 +109,13 @@ class RotNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(1000, 4))
         
-        self.rotnet = nn.Sequential(
-            self.backbone,
-            self.rotnet_classifier)
-
     def forward(self, x):
-        x = self.rotnet(x)
+        x = self.fpn_backbone(x)
+        x = x["3"]
+        x = self.avg_pooling(x)
+        x = torch.flatten(x, start_dim = 1)
+        x = self.fc_layers(x)
+        x = self.rotnet_classifier(x)
         return x
 
 # test

@@ -54,15 +54,17 @@ class MainLoop():
             self.test_loader = DataloaderBuilder(cfg, "test").loader()
             # loop 
             self.test_loop = LoopSelector(cfg["loop"]).get_test()
-        
+    
+    # TRAIINING LOOP NEEDS TO BE PLUGABLE AND LOADABLE
     def train(self):
 
         save_json(self.cfg,
                 self.cfg["logging"]["path"],
                 "cfg.json")
 
+        # THIS HAS TO BE CHANGED TO CONVERT FROM INSTANCE SEGMENTATION TO CLASSIFICATION
         best_loss = 100 # arbitraraly high
-        best_mAP = 0 # arb low
+        #best_mAP = 0 # arb low
         for epoch in range(self.cfg["loop"]["start_epoch"], self.cfg["loop"]["end_epoch"]):
             
             # record epoch
@@ -87,14 +89,16 @@ class MainLoop():
             
             print(" --- Validation ----------------------------------------------------------------")
 
+            # CHANGES HERE TO CLASSIFICATION FROM INSTANCE SEGMENTATION
             # validation loop
             self.val_loop(self.model,
                 self.val_loader,                
-                self.scaler,
+                #self.scaler,
                 self.logger,
                 self.cfg["loop"]["device"],
                 epoch,
-                self.cfg["logging"]["path"])
+                #self.cfg["logging"]["path"]
+                )
 
             garbage_collector()
 
@@ -112,17 +116,18 @@ class MainLoop():
                 self.cfg["logging"]["path"],
                 self.cfg["logging"]["pth_name"],
                 best_loss)
-
+            
+            # HAD TO COMMENT OUT FOR CLASSIFICATION
             # TIDY THIS UP
-            if self.logger["mAP"][-1] > best_mAP:
-                save_model(epoch, 
-                    self.model, 
-                    self.optimizer, 
-                    self.cfg["logging"]["path"], 
-                    "best_mAP.pth")
-                best_mAP = self.logger["mAP"][-1]
-                self.logger["best_mAP"].append(best_mAP)
-                self.logger["best_mAP_epoch"].append(epoch)
+            #if self.logger["mAP"][-1] > best_mAP:
+            #    save_model(epoch, 
+            #        self.model, 
+            #        self.optimizer, 
+            #        self.cfg["logging"]["path"], 
+            #        "best_mAP.pth")
+            #    best_mAP = self.logger["mAP"][-1]
+            #    self.logger["best_mAP"].append(best_mAP)
+            #    self.logger["best_mAP_epoch"].append(epoch)
 
             # log saving
             save_json(self.logger,

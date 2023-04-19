@@ -67,7 +67,7 @@ def multi_train_loop(model, loaders, optimizer, scaler, logger, device ,iter_cou
         optimizer.zero_grad()
 
         # Test Reporting
-        train_reporter(iter_count, device, total_loss.item(), epoch)       
+        train_reporter(iter_count, device, total_loss.item(), epoch, "combined_loss")       
         iter_count += 1
 
         garbage_collector()
@@ -144,8 +144,9 @@ def multi_val_loop(model, loaders, scaler, logger, device, epoch, exp_dir):
     logger["val_loss"].append(loss)
     logger["ssl_val_loss"].append(ssl_loss)
     logger["mAP"].append(mAP)
-    val_reporter(device, loss, epoch)
-    val_reporter(device, ssl_loss, epoch)
+    val_reporter(device, loss, "sup_loss", epoch)
+    val_reporter(device, ssl_loss, "ssl_loss", epoch)
+    val_reporter(device, mAP, "mAP", epoch)
     
 def multi_test_loop(model, loader, device, exp_dir, train_flag=True):
     garbage_collector()

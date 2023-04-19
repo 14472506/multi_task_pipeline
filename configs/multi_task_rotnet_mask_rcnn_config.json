@@ -56,7 +56,7 @@
     },
     "logging":{
         "logger": "multi_task_logger",
-        "path": "outputs/multi_task_dev/mutli_task_all_integration_test",
+        "path": "outputs/multi_task_dev/DELET_THIS",
         "pth_name": "multi_task_best.pth"
     }
 }
