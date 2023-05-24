@@ -5,6 +5,7 @@ Details
 from .mask_rcnn_resnet_50_fpn import Mask_RCNN_Resnet_50_FPN
 from .rotnet_resnet_50 import RotNet_Resnet_50
 from .multi_task_rotnet_mask_rcnn_resnet_50 import Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN
+from .jigsaw_resnet_50 import Jigsaw_ResNet_50
 
 # model build
 class ModelBuilder():
@@ -28,6 +29,9 @@ class ModelBuilder():
         # ================================================
         if self.cfg["model_name"] == "RotNet_ResNet_50":
             model = RotNet_Resnet_50(self.cfg)
+            return model
+        if self.cfg["model_name"] == "Jigsaw_ResNet_50":
+            model = Jigsaw_ResNet_50(self.cfg)
             return model
 
         # ================================================

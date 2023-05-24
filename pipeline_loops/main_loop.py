@@ -93,11 +93,11 @@ class MainLoop():
             # validation loop
             self.val_loop(self.model,
                 self.val_loader,                
-                #self.scaler,
+                self.scaler,
                 self.logger,
                 self.cfg["loop"]["device"],
                 epoch,
-                #self.cfg["logging"]["path"]
+                self.cfg["logging"]["path"]
                 )
 
             garbage_collector()

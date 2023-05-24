@@ -1,7 +1,9 @@
 {
     "model":{
         "model_name": "Mask_RCNN_Resnet_50_FPN",
-        "pre_trained": true,
+        "pre_trained": false,
+        "loaded": false,
+        "load_source": "",
         "trainable_layers": 5,
         "num_classes": 2
     },   
@@ -11,21 +13,21 @@
             "json_dir": "datasets/sources/jersey_dataset_v4/train/train.json",
             "batch_size": 1,
             "shuffle": true,
-            "num_workers": 4
+            "num_workers": 0
         },
         "val":{
             "dir": "datasets/sources/jersey_dataset_v4/val",
             "json_dir": "datasets/sources/jersey_dataset_v4/val/val.json",
             "batch_size": 1,
             "shuffle": false,
-            "num_workers": 4
+            "num_workers": 0
         },
         "test":{
             "dir": "datasets/sources/jersey_dataset_v4/test",
             "json_dir": "datasets/sources/jersey_dataset_v4/test/test.json",
             "batch_size": 1,
             "shuffle": false,
-            "num_workers": 4
+            "num_workers": 0
         }
     },
     "optimizer":{
@@ -47,7 +49,7 @@
     },
     "logging":{
         "logger": "base_logger",
-        "path": "outputs/multi_task_dev/test_3",
-        "pth_name": "mem_test_best.pth"
+        "path": "outputs/No_PT/Base_Mask_R-CNN",
+        "pth_name": "best.pth"
     }
 }

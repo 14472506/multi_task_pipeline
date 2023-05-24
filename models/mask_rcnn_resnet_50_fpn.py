@@ -23,9 +23,9 @@ class Mask_RCNN_Resnet_50_FPN(nn.Module):
         # backbone selecting
         if cfg["pre_trained"]:
             self.backbone = torchvision.models.detection.backbone_utils.resnet_fpn_backbone(
-                backbone_name="resnet50",
-                weights="ResNet50_Weights.DEFAULT",
-                trainable_layers=cfg["trainable_layers"])
+                         backbone_name="resnet50",
+                         weights="ResNet50_Weights.DEFAULT",
+                         trainable_layers=cfg["trainable_layers"])
         else:
             self.backbone = torchvision.models.detection.backbone_utils.resnet_fpn_backbone(
                 backbone_name="resnet50",
@@ -60,7 +60,12 @@ class Mask_RCNN_Resnet_50_FPN(nn.Module):
         # and replace the mask predictor with a new one
         self.Mask_RCNN.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask,
                                                            hidden_layer,
-                                                           self.num_classes)  
+                                                           self.num_classes)
+        
+        if cfg["loaded"]:    
+            checkpoint = torch.load(cfg["load_source"])
+            self.Mask_RCNN.backbone.load_state_dict(checkpoint["state_dict"], strict=False)
+            print("LOADED SSL")
     
     def forward(self, x, y=None):
 

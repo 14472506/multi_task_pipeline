@@ -45,7 +45,7 @@ def inst_train_loop(model, loader, optimizer, scaler, logger, device ,iter_count
         
         # reporting
         loop_loss_acc += losses.item()
-        train_reporter(iter_count, device, losses.item(), epoch)
+        train_reporter(iter_count, device, losses.item(), epoch, "mrcnn")
         iter_count += 1
 
         garbage_collector()
@@ -82,16 +82,16 @@ def inst_val_loop(model, loader, scaler, logger, device, epoch, exp_dir):
 
             garbage_collector()
 
-    mAP = evaluate(model,
-        loader, 
-        device,
-        exp_dir, 
-        train_flag=True)
-    print(mAP)
+    #mAP = evaluate(model,
+    #    loader, 
+    #    device,
+    #    exp_dir, 
+    #    train_flag=True)
+    #print(mAP)
 
     loss = loop_loss_acc/len(loader)
     logger["val_loss"].append(loss)
-    val_reporter(device, loss, epoch)
+    val_reporter(device, loss, "mrcnn", epoch)
     
 def inst_test_loop(model, test_loader, device, exp_dir, train_flag=True):
     garbage_collector()
