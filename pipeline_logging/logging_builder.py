@@ -44,12 +44,21 @@ class LogBuilder():
         Details
         """
         logger = {
+            # epoch count
+            "epochs": [],            
+            # training losses
             "train_loss": [],
-            "val_loss": [],
             "ssl_train_loss": [],
+            # validation losses and values
+            "val_loss": [],
             "ssl_val_loss": [],
-            "epochs": [],
+            "mAP": [],
+            # best results
+            "best_mAP": [],
+            "best_mAP_epoch": [],
+            "best_mAP_step_epoch": [],
             "best_val": [],
-            "best_epoch": []
+            "best_epoch": [],
+            "best_step_epoch": [],
         }
         return logger

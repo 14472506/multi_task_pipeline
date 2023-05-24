@@ -7,6 +7,7 @@ import numpy as np
 import random
 from .COCODataset import COCODataset, COCO_collate_function
 from .RotNetDataset import RotNetDataset
+from .COCO_RotNet_Dataset import COCORotDataset, COCO_collate_function
 
 # class
 class DataloaderBuilder():
@@ -148,7 +149,7 @@ class DataloaderBuilder():
             generator = gen)
 
         # ----- COCO loader for Mask-RCNN ------------------------------------------------------- #
-        dataset = COCODataset(cfg["dir"], cfg["json_dir"])
+        dataset = COCORotDataset(cfg["dir"], cfg["json_dir"])
         dataloader = torch.utils.data.DataLoader(dataset,
             batch_size = cfg["batch_size"],
             shuffle = cfg["shuffle"],

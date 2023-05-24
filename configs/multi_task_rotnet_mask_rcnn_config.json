@@ -18,7 +18,7 @@
             "batch_size": 1,
             "batch_size_ssl": 4,
             "shuffle": true,
-            "num_workers": 4
+            "num_workers": 0
         },
         "val":{
             "dir": "datasets/sources/jersey_dataset_v4/val",
@@ -26,7 +26,7 @@
             "batch_size": 1,
             "batch_size_ssl": 1,
             "shuffle": false,
-            "num_workers": 4
+            "num_workers": 0
         },
         "test":{
             "dir": "datasets/sources/jersey_dataset_v4/test",
@@ -34,7 +34,7 @@
             "batch_size": 1,
             "batch_size_ssl": 1,
             "shuffle": false,
-            "num_workers": 4
+            "num_workers": 0
         }
     },
     "optimizer":{
@@ -45,8 +45,8 @@
         "sched_gamma": 0.1
     },
     "loop":{
-        "train": false,
-        "test": true,
+        "train": true,
+        "test": false,
         "start_epoch": 0, 
         "end_epoch": 80,
         "loop_type": "multi_task",
@@ -56,7 +56,7 @@
     },
     "logging":{
         "logger": "multi_task_logger",
-        "path": "outputs/multi_task_dev/test_5",
+        "path": "outputs/multi_task_dev/DELET_THIS",
         "pth_name": "multi_task_best.pth"
     }
 }

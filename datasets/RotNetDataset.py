@@ -43,7 +43,11 @@ class RotNetDataset(data.Dataset):
         """
         # load called RGB image 
         img_path = os.path.join(self.root, self.images[idx])
-        image = Image.open(img_path).convert("RGB")
+        try: 
+            image = Image.open(img_path).convert("RGB")
+        except OSError:
+            print("ERROR")
+            print(img_path)
 
         # getting basic image square
         image = basic_square_crop(image)

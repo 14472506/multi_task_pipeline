@@ -36,7 +36,7 @@ def class_train_loop(model, loader, optimizer, scaler, logger, device ,iter_coun
         # loss detach ------ May not be needed
         loss = loss.detach()
         loop_loss_acc += loss.item()
-        train_reporter(iter_count, device, loss.item(), epoch)
+        train_reporter(iter_count, device, loss.item(), epoch, "rotnet")
         iter_count += 1
     
     logger["train_loss"].append(loop_loss_acc/len(loader))
@@ -73,7 +73,7 @@ def class_val_loop(model, loader, logger, device, epoch):
     # get val loss for epoch
     loss = loop_loss_acc/len(loader)
     logger["val_loss"].append(loss)
-    val_reporter(device, loss, epoch)
+    val_reporter(device, loss, "rotnet", epoch)
 
 def class_test_loop(model, test_loader, device, exp_dir, train_flag=True):
     print("TEST LOOP")

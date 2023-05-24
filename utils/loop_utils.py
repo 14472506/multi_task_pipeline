@@ -45,3 +45,26 @@ def garbage_collector():
     torch.cuda.empty_cache()
     torch.cuda.reset_max_memory_allocated()
     torch.cuda.synchronize()
+
+def multi_task_training_scheduler(max_list, min_list):
+    """
+    something
+    """
+    if len(min_list) == 0:
+        return(max_list)
+    else:
+        even = int(len(max_list)/len(min_list))
+        rem = len(max_list)%len(min_list)
+        iters = len(max_list) - rem
+        new_max = []
+        min_count = 0
+        for i in range(iters):
+            if i%even == 0:
+                new_max.append(min_list[min_count])
+                min_count += 1
+            new_max.append(max_list[i])
+        if rem == 0:
+            new_min = []
+        else:
+            new_min = max_list[-rem:]
+        return multi_task_training_scheduler(new_max, new_min)

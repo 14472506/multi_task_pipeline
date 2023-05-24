@@ -6,7 +6,7 @@ from pipeline_loops import MainLoop
 import json
 
 # init experiment list
-exp_list = ["./configs/multi_task_rotnet_mask_rcnn_config.json"]
+exp_list = ["./configs/rotnet_dev_config.json"]
 
 
 # looping through list
