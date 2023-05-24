@@ -75,7 +75,7 @@ class MainLoop():
             print(" [Epoch: %s]" %epoch)
             print("================================================================================")
             print(" --- Training ------------------------------------------------------------------")
-            
+
             self.iter_count = self.train_loop(self.model, 
                 self.train_loader,
                 self.optimizer,

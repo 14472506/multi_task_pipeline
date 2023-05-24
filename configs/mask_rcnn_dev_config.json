@@ -9,6 +9,7 @@
     },   
     "dataset":{
         "train":{
+            "type": "train",
             "dir": "datasets/sources/jersey_dataset_v4/train",
             "json_dir": "datasets/sources/jersey_dataset_v4/train/train.json",
             "batch_size": 1,
@@ -16,6 +17,7 @@
             "num_workers": 0
         },
         "val":{
+            "type": "val",
             "dir": "datasets/sources/jersey_dataset_v4/val",
             "json_dir": "datasets/sources/jersey_dataset_v4/val/val.json",
             "batch_size": 1,
@@ -23,6 +25,7 @@
             "num_workers": 0
         },
         "test":{
+            "type": "test",
             "dir": "datasets/sources/jersey_dataset_v4/test",
             "json_dir": "datasets/sources/jersey_dataset_v4/test/test.json",
             "batch_size": 1,
@@ -49,7 +52,7 @@
     },
     "logging":{
         "logger": "base_logger",
-        "path": "outputs/No_PT/Base_Mask_R-CNN",
+        "path": "outputs/Aug_test/Test_1",
         "pth_name": "best.pth"
     }
 }

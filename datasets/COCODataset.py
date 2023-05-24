@@ -24,9 +24,11 @@ from pycocotools import mask as coco_mask
 from PIL import Image
 import numpy as np
 
+
 #import transforms as T
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2
+from .augmentations import Augmentations as Augs
 
 # ============================
 # Classes and functions for data loading
@@ -49,7 +51,7 @@ class COCODataset(data.Dataset):
 
     Edited by:  Bradley Hurst
     """
-    def __init__(self, root, json_root, transforms=None, train=False):
+    def __init__(self, root, json_root, transforms=False, train=False):
         self.root = root
         self.coco = COCO(json_root)
         self.ids = list(self.coco.imgs.keys())
@@ -115,11 +117,29 @@ class COCODataset(data.Dataset):
         # laoding image
         image_path = self.coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(self.root, image_path)).convert('RGB')
-        
+
+        img = np.asarray(img)
+        masks = np.asarray(target["masks"])
+        masks = np.transpose(masks, (1, 2, 0))
+
+        if self.train == True:
+            if self.transforms == True:
+                Aug_loader = Augs("Mask_RCNN")
+                Augmentations = Aug_loader.aug_loader()              
+                aug_data = Augmentations(image=img, mask=masks)
+
+                img = aug_data['image']
+                masks = aug_data ['mask']
+                masks = np.transpose(masks, (2, 0, 1))
+
+                mask_conv = T.ToTensor()
+                masks = mask_conv(mask)
+                
+                target["masks"] = masks
+
         # converting to tensor
         im_conv = T.ToTensor()
         img = im_conv(img)
-        
         ###########################################################################
         #if self.train == True:
         #    augs = A.Compose([
@@ -147,8 +167,8 @@ class COCODataset(data.Dataset):
         ###########################################################################
 
         # applying transforms if applicable
-        if self.transforms != None:
-            img, target = self.transforms(img, transform)
+        #if self.transforms != None:
+        #    img, target = self.transforms(img, transform)
 
         return img, target
     

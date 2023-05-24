@@ -52,7 +52,10 @@ class DataloaderBuilder():
         gen.manual_seed(seed)
 
         cfg = self.cfg["dataset"][self.load_type]
-        dataset = COCODataset(cfg["dir"], cfg["json_dir"])
+        if cfg["type"] == "train":
+            dataset = COCODataset(cfg["dir"], cfg["json_dir"], transforms=False, train=False)
+        else:
+            dataset = COCODataset(cfg["dir"], cfg["json_dir"])
         dataloader = torch.utils.data.DataLoader(dataset,
             batch_size = cfg["batch_size"],
             shuffle = cfg["shuffle"],
