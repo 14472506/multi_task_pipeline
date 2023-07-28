@@ -8,8 +8,6 @@ import json
 # init experiment list
 exp_list = ["./configs/mask_rcnn_dev_config.json"]*10
 
-print(exp_list)
-
 count = 1
 # looping through list
 for exp in exp_list:

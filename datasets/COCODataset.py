@@ -118,12 +118,13 @@ class COCODataset(data.Dataset):
         image_path = self.coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(self.root, image_path)).convert('RGB')
 
-        img = np.asarray(img)
-        masks = np.asarray(target["masks"])
-        masks = np.transpose(masks, (1, 2, 0))
-
         if self.train == True:
             if self.transforms == True:
+                
+                img = np.asarray(img)
+                masks = np.asarray(target["masks"])
+                masks = np.transpose(masks, (1, 2, 0))
+
                 Aug_loader = Augs("Mask_RCNN")
                 Augmentations = Aug_loader.aug_loader()              
                 aug_data = Augmentations(image=img, mask=masks)

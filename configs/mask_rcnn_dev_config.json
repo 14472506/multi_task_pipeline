@@ -1,9 +1,9 @@
 {
     "model":{
         "model_name": "Mask_RCNN_Resnet_50_FPN",
-        "pre_trained": false,
-        "loaded": false,
-        "load_source": "",
+        "pre_trained": true,
+        "loaded": true,
+        "load_source": "outputs/poor_reduced_ssl/jigsaw_pt_1/ps_Jigsaw_best.pth",
         "trainable_layers": 5,
         "num_classes": 2
     },   
@@ -14,7 +14,8 @@
             "json_dir": "datasets/sources/jersey_dataset_v4/train/train.json",
             "batch_size": 1,
             "shuffle": true,
-            "num_workers": 0
+            "num_workers": 0,
+            "augment": false
         },
         "val":{
             "type": "val",
@@ -22,7 +23,8 @@
             "json_dir": "datasets/sources/jersey_dataset_v4/val/val.json",
             "batch_size": 1,
             "shuffle": false,
-            "num_workers": 0
+            "num_workers": 0,
+            "augment": false
         },
         "test":{
             "type": "test",
@@ -30,7 +32,8 @@
             "json_dir": "datasets/sources/jersey_dataset_v4/test/test.json",
             "batch_size": 1,
             "shuffle": false,
-            "num_workers": 0
+            "num_workers": 0,
+            "augment": false
         }
     },
     "optimizer":{
@@ -41,8 +44,8 @@
         "sched_gamma": 0.1
     },
     "loop":{
-        "train": true,
-        "test": false,
+        "train": false,
+        "test": true,
         "start_epoch": 0, 
         "end_epoch": 80,
         "loop_type": "instance",
@@ -52,7 +55,7 @@
     },
     "logging":{
         "logger": "base_logger",
-        "path": "outputs/Aug_test/Test_1",
+        "path": "outputs/poor_reduced_ssl/Jigsaw_pt_Mask_RCNN",
         "pth_name": "best.pth"
     }
 }

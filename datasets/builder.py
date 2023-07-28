@@ -9,6 +9,8 @@ from .COCODataset import COCODataset, COCO_collate_function
 from .RotNetDataset import RotNetDataset
 from .JigsawDataset import JigsawDataset
 from .COCO_RotNet_Dataset import COCORotDataset, COCO_collate_function
+from .augmentation_wrappers import RotNetWrapper, JigsawWrapper
+from .augmentations import Augmentations
 
 # class
 class DataloaderBuilder():
@@ -21,6 +23,7 @@ class DataloaderBuilder():
         """
         self.cfg = cfg
         self.load_type = load_type
+        self.augment = self.cfg["dataset"][self.load_type]["augment"]
         print(load_type)
 
     def loader(self):
@@ -52,10 +55,11 @@ class DataloaderBuilder():
         gen.manual_seed(seed)
 
         cfg = self.cfg["dataset"][self.load_type]
-        if cfg["type"] == "train":
-            dataset = COCODataset(cfg["dir"], cfg["json_dir"], transforms=False, train=False)
+        if cfg["augment"] == True:
+            dataset = COCODataset(cfg["dir"], cfg["json_dir"], transforms=True, train=True)
         else:
             dataset = COCODataset(cfg["dir"], cfg["json_dir"])
+        
         dataloader = torch.utils.data.DataLoader(dataset,
             batch_size = cfg["batch_size"],
             shuffle = cfg["shuffle"],
@@ -63,6 +67,7 @@ class DataloaderBuilder():
             worker_init_fn = init_fn_worker,
             generator = gen,
             collate_fn = COCO_collate_function)
+        
         return dataloader
 
     # LOT OF COPY AND PAST CODE BETWEEN ROTNET AND JIGSAW DLS, THIS SHOULD BE ADDRESSED. PS AND JIGROT?
@@ -97,6 +102,11 @@ class DataloaderBuilder():
             dataset = test
         if self.load_type == "train":
             dataset = train
+            if self.augment == True:
+                Aug_loader = Augmentations("RotNet")
+                Augs = Aug_loader.aug_loader()
+                train == RotNetWrapper(train, Augs)
+                print("augs applied")
         if self.load_type == "val":
             dataset = validation
         
@@ -142,6 +152,11 @@ class DataloaderBuilder():
             dataset = test
         if self.load_type == "train":
             dataset = train
+            if self.augment == True:
+                Aug_loader = Augmentations("Jigsaw")
+                Augs = Aug_loader.aug_loader()
+                train == JigsawWrapper(train, Augs)
+                print("augs applied")
         if self.load_type == "val":
             dataset = validation
         

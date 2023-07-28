@@ -43,7 +43,7 @@ def class_train_loop(model, loader, optimizer, scaler, logger, device ,iter_coun
 
     return iter_count
 
-def class_val_loop(model, loader, logger, device, epoch):
+def class_val_loop(model, loader, scaler, logger, device, epoch, path):
     """
     Detials
     """

@@ -26,16 +26,11 @@ def inst_train_loop(model, loader, optimizer, scaler, logger, device ,iter_count
         images, targets = data
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
-        print(images)
-        print(targets)
         
         # get model output
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
-
-        print("pass 1")
 
         scaler.scale(losses).backward()
         #
