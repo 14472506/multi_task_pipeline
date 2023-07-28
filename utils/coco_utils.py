@@ -25,7 +25,8 @@ def convert_to_coco_api(ds):
         # find better way to get target
         # targets = ds.get_annotations(img_idx)
         # get image and target in image idx
-        img, targets, _, _ = ds[img_idx]
+        #img, targets, _, _ = ds[img_idx]
+        img, targets = ds[img_idx]
 
         # getting image id from target
         image_id = targets["image_id"].item()

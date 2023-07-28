@@ -7,7 +7,10 @@ import numpy as np
 import random
 from .COCODataset import COCODataset, COCO_collate_function
 from .RotNetDataset import RotNetDataset
+from .JigsawDataset import JigsawDataset
 from .COCO_RotNet_Dataset import COCORotDataset, COCO_collate_function
+from .augmentation_wrappers import RotNetWrapper, JigsawWrapper
+from .augmentations import Augmentations
 
 # class
 class DataloaderBuilder():
@@ -20,6 +23,7 @@ class DataloaderBuilder():
         """
         self.cfg = cfg
         self.load_type = load_type
+        self.augment = self.cfg["dataset"][self.load_type]["augment"]
         print(load_type)
 
     def loader(self):
@@ -31,6 +35,9 @@ class DataloaderBuilder():
             return loader
         if self.cfg["model"]["model_name"] == "RotNet_ResNet_50":
             loader = self.rotnet_loader()
+            return loader
+        if self.cfg["model"]["model_name"] == "Jigsaw_ResNet_50":
+            loader = self.jigsaw_loader()
             return loader
         if self.cfg["model"]["model_name"] == "Multi_task_RotNet_Mask_RCNN_Resnet50":
             loader = self.rotnet_multitask_loader()
@@ -48,7 +55,11 @@ class DataloaderBuilder():
         gen.manual_seed(seed)
 
         cfg = self.cfg["dataset"][self.load_type]
-        dataset = COCODataset(cfg["dir"], cfg["json_dir"])
+        if cfg["augment"] == True:
+            dataset = COCODataset(cfg["dir"], cfg["json_dir"], transforms=True, train=True)
+        else:
+            dataset = COCODataset(cfg["dir"], cfg["json_dir"])
+        
         dataloader = torch.utils.data.DataLoader(dataset,
             batch_size = cfg["batch_size"],
             shuffle = cfg["shuffle"],
@@ -56,8 +67,10 @@ class DataloaderBuilder():
             worker_init_fn = init_fn_worker,
             generator = gen,
             collate_fn = COCO_collate_function)
+        
         return dataloader
 
+    # LOT OF COPY AND PAST CODE BETWEEN ROTNET AND JIGSAW DLS, THIS SHOULD BE ADDRESSED. PS AND JIGROT?
     def rotnet_loader(self, seed=42):
         """
         Details
@@ -89,6 +102,61 @@ class DataloaderBuilder():
             dataset = test
         if self.load_type == "train":
             dataset = train
+            if self.augment == True:
+                Aug_loader = Augmentations("RotNet")
+                Augs = Aug_loader.aug_loader()
+                train == RotNetWrapper(train, Augs)
+                print("augs applied")
+        if self.load_type == "val":
+            dataset = validation
+        
+        # getting specific loader config based on loader type
+        cfg = self.cfg["dataset"][self.load_type]
+        
+        dataloader = torch.utils.data.DataLoader(dataset,
+            batch_size = cfg["batch_size"],
+            shuffle = cfg["shuffle"],
+            num_workers = cfg["num_workers"],
+            worker_init_fn = init_fn_worker,
+            generator = gen)
+        return dataloader
+    
+    def jigsaw_loader(self, seed=42):
+        """
+        Details
+        """
+        def init_fn_worker(seed):
+            np.random.seed(seed)
+            random.seed(seed)
+
+        # get all data 
+        all_data = JigsawDataset(self.cfg["dataset"]["dir"], self.cfg["model"]["num_tiles"], self.cfg["model"]["num_permutations"])
+
+        gen = torch.Generator()
+        gen.manual_seed(seed)
+
+        # splitting data into train and test
+        train_base_size = int(len(all_data)*self.cfg["dataset"]["train_test_split"])
+        test_size = len(all_data) - train_base_size
+        train_base, test = torch.utils.data.random_split(all_data, [train_base_size, test_size]) 
+
+        # just not doing this if not needed
+        if self.cfg["loop"]["train"]:
+            # splitting train into train and val
+            train_size = int(len(train_base)*self.cfg["dataset"]["train_val_split"])
+            validation_size = len(train_base) - train_size
+            train, validation = torch.utils.data.random_split(train_base, [train_size, validation_size])
+        
+        # selecting only 
+        if self.load_type == "test":
+            dataset = test
+        if self.load_type == "train":
+            dataset = train
+            if self.augment == True:
+                Aug_loader = Augmentations("Jigsaw")
+                Augs = Aug_loader.aug_loader()
+                train == JigsawWrapper(train, Augs)
+                print("augs applied")
         if self.load_type == "val":
             dataset = validation
         

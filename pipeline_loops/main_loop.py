@@ -75,7 +75,7 @@ class MainLoop():
             print(" [Epoch: %s]" %epoch)
             print("================================================================================")
             print(" --- Training ------------------------------------------------------------------")
-            
+
             self.iter_count = self.train_loop(self.model, 
                 self.train_loader,
                 self.optimizer,
@@ -93,11 +93,11 @@ class MainLoop():
             # validation loop
             self.val_loop(self.model,
                 self.val_loader,                
-                #self.scaler,
+                self.scaler,
                 self.logger,
                 self.cfg["loop"]["device"],
                 epoch,
-                #self.cfg["logging"]["path"]
+                self.cfg["logging"]["path"]
                 )
 
             garbage_collector()
