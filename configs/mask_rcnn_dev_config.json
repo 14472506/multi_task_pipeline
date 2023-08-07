@@ -3,7 +3,7 @@
         "model_name": "Mask_RCNN_Resnet_50_FPN",
         "pre_trained": true,
         "loaded": true,
-        "load_source": "outputs/poor_reduced_ssl/jigsaw_pt_1/ps_Jigsaw_best.pth",
+        "load_source": "outputs/All_RGB_SSL/rotnet_pt_1/rotnet_best.pth",
         "trainable_layers": 5,
         "num_classes": 2
     },   
@@ -55,7 +55,7 @@
     },
     "logging":{
         "logger": "base_logger",
-        "path": "outputs/poor_reduced_ssl/Jigsaw_pt_Mask_RCNN",
+        "path": "outputs/All_RGB_SSL/Rotnet_pt_Mask_RCNN",
         "pth_name": "best.pth"
     }
 }

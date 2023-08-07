@@ -94,7 +94,7 @@ class Visualiser():
 
                 # get model output
                 with torch.no_grad():
-                    output = self.model(img_tensor)
+                    output = self.model([img_tensor])
                 
                 # outputs
                 masks = output[0]['masks'].numpy()

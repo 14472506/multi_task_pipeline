@@ -40,9 +40,9 @@ class Augmentations():
         """
         transforms = A.Compose([
             A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(p=0.1),
-            A.Rotate(limit=25, p=0.2),
-            A.ToGray(p=0.3)
+            A.OneOf([A.RandomBrightnessContrast(p=0.2),                     
+                     A.ToGray(p=0.3)                     
+                     ], p=1)
         ], p=1, additional_targets={'image0': 'image', 'mask0': 'mask'})
         
         return transforms

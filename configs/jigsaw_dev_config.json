@@ -7,14 +7,14 @@
         "batch_norm": false
     },   
     "dataset":{
-        "dir": "datasets/sources/poor_reduced_ssl",
+        "dir": "datasets/sources/All_RGB",
         "train_test_split": 0.8,
         "train_val_split": 0.8,
         "train":{
             "batch_size": 4,
             "shuffle": true,
             "num_workers": 0,
-            "augment": false
+            "augment": true
         },
         "val":{
             "batch_size": 1,
@@ -48,7 +48,7 @@
     },
     "logging":{
         "logger": "base_logger",
-        "path": "outputs/poor_reduced_ssl/jigsaw_pt",
+        "path": "outputs/All_RGB_SSL/jigsaw_pt",
         "pth_name": "Jigsaw_best.pth"
     }
 }
