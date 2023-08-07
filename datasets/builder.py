@@ -184,17 +184,17 @@ class DataloaderBuilder():
 
         # ----- RotNet loader for RotNet -------------------------------------------------------- #
         # get all data 
-        all_data = RotNetDataset(self.cfg["dataset"]["dir"], self.cfg["model"]["num_rotations"],)
+        all_data = RotNetDataset(self.cfg["dataset"]["rotnet"]["dir"], self.cfg["model"]["num_rotations"],)
 
         # splitting data into train and test
-        train_base_size = int(len(all_data)*self.cfg["dataset"]["train_test_split"])
+        train_base_size = int(len(all_data)*self.cfg["dataset"]["rotnet"]["train_test_split"])
         test_size = len(all_data) - train_base_size
         train_base, test = torch.utils.data.random_split(all_data, [train_base_size, test_size]) 
 
         # just not doing this if not needed
         if self.cfg["loop"]["train"]:
             # splitting train into train and val
-            train_size = int(len(train_base)*self.cfg["dataset"]["train_val_split"])
+            train_size = int(len(train_base)*self.cfg["dataset"]["rotnet"]["train_val_split"])
             validation_size = len(train_base) - train_size
             train, validation = torch.utils.data.random_split(train_base, [train_size, validation_size])
         
@@ -203,21 +203,31 @@ class DataloaderBuilder():
             dataset = test
         if self.load_type == "train":
             dataset = train
+            if self.augment == True:
+                Aug_loader = Augmentations("RotNet")
+                Augs = Aug_loader.aug_loader()
+                train == RotNetWrapper(train, Augs)
+                print("augs applied")
         if self.load_type == "val":
             dataset = validation
         
         # getting specific loader config based on loader type
-        cfg = self.cfg["dataset"][self.load_type]
+        cfg = self.cfg["dataset"]["rotnet"][self.load_type]
         
         ssl_dataloader = torch.utils.data.DataLoader(dataset,
-            batch_size = cfg["batch_size_ssl"],
+            batch_size = cfg["batch_size"],
             shuffle = cfg["shuffle"],
             num_workers = cfg["num_workers"],
             worker_init_fn = init_fn_worker,
             generator = gen)
 
         # ----- COCO loader for Mask-RCNN ------------------------------------------------------- #
-        dataset = COCORotDataset(cfg["dir"], cfg["json_dir"])
+        cfg = self.cfg["dataset"]["mask_rcnn"][self.load_type]
+        if cfg["augment"] == True:
+            dataset = COCODataset(cfg["dir"], cfg["json_dir"], transforms=True, train=True)
+        else:
+            dataset = COCODataset(cfg["dir"], cfg["json_dir"])
+
         dataloader = torch.utils.data.DataLoader(dataset,
             batch_size = cfg["batch_size"],
             shuffle = cfg["shuffle"],

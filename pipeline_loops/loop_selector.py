@@ -8,7 +8,7 @@ from .instance_loops import (inst_train_loop,
 from .classification_loops import(class_train_loop,
                                   class_val_loop,
                                   class_test_loop)
-from .multi_task_loop import(multi_train_loop,
+from .multi_task_dev_3 import(multi_train_loop,
                              multi_val_loop,
                              multi_test_loop)
 

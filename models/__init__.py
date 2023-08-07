@@ -1,4 +1,5 @@
 from .mask_rcnn_resnet_50_fpn import Mask_RCNN_Resnet_50_FPN
-from .multi_task_rotnet_mask_rcnn_resnet_50 import Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN
+from .multi_task_rot_rcnn_dev2 import Multi_task_RotNet_Mask_RCNN_Resnet_50_FPN
+from .multi_task_rot_rcnn_dev3 import RotMaskRCNN_MultiTask
 from .jigsaw_resnet_50 import Jigsaw_ResNet_50
 from .builder import ModelBuilder

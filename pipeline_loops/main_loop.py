@@ -43,15 +43,23 @@ class MainLoop():
         # data loader and loops
         if cfg["loop"]["train"]:
             # data loaders
-            self.train_loader = DataloaderBuilder(cfg, "train").loader()
-            self.val_loader = DataloaderBuilder(cfg, "val").loader()
+            if cfg["loop"]["loop_type"]:
+                pass
+            else:
+                self.train_loader = DataloaderBuilder(cfg, "train").loader()
+                self.val_loader = DataloaderBuilder(cfg, "val").loader()
+            
             # loops
             self.train_loop = LoopSelector(cfg["loop"]).get_train()
             self.val_loop = LoopSelector(cfg["loop"]).get_val()
               
         if cfg["loop"]["test"]:
-            # data laoder
-            self.test_loader = DataloaderBuilder(cfg, "test").loader()
+            if cfg["loop"]["loop_type"]:
+                pass
+            else:
+                # data laoder
+                self.test_loader = DataloaderBuilder(cfg, "test").loader()
+            
             # loop 
             self.test_loop = LoopSelector(cfg["loop"]).get_test()
     
