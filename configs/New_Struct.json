@@ -1,0 +1,72 @@
+{
+    "metadata": {
+        "version": "1.0",
+        "description": "Base configuration for RotNet_ResNet_50 training on All_RGB dataset."
+    },
+    "model": {
+        "name": "RotNet_ResNet_50",
+        "params": {
+            "backbone_type": "pre-trained",
+            "num_rotations": 4,
+            "drop_out": 0.2,
+            "batch_norm": false
+        },
+        "additional_models": [] 
+    }, 
+    "dataset": {
+        "source": "datasets/sources/All_RGB",
+        "splits": {
+            "train_test": 0.8,
+            "train_val": 0.8
+        },
+        "params": {
+            "train": {
+                "batch_size": 4,
+                "shuffle": true,
+                "num_workers": 0,
+                "augment": true
+            },
+            "val": {
+                "batch_size": 1,
+                "shuffle": false,
+                "num_workers": 0,
+                "augment": false
+            },
+            "test": {
+                "batch_size": 1,
+                "shuffle": false,
+                "num_workers": 0,
+                "augment": false
+            }
+        }
+    },
+    "optimizer": {
+        "name": "Adam",
+        "params": {
+            "lr": 0.00005
+        },
+        "scheduler": {
+            "name": "StepLR",
+            "params": {
+                "step": 200,
+                "gamma": 0.1
+            }
+        }
+    },
+    "loop": {
+        "actions": ["train"],
+        "epochs": {
+            "start": 0,
+            "end": 45
+        },
+        "type": "classification",
+        "device": "cuda:0",
+        "scheduler": true,
+        "amp": false
+    },
+    "logging": {
+        "logger": "base_logger",
+        "path": "outputs/All_RGB_SSL/rotnet_pt",
+        "checkpoint_name": "rotnet_best.pth"
+    }
+}

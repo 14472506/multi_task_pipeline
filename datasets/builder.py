@@ -1,3 +1,106 @@
+import torch
+import numpy as np
+import random
+# ... other imports ...
+
+class DataloaderBuilder():
+    """
+    This class builds dataloaders based on given configurations and model requirements.
+    """
+
+    def __init__(self, cfg, load_type):
+        self.cfg = cfg
+        self.load_type = load_type
+        self.augment = self.cfg["dataset"][self.load_type]["augment"]
+        self.model_name = self.cfg["model"]["model_name"]
+
+    def loader(self):
+        """
+        Returns the appropriate dataloader based on the model configuration.
+        """
+        model_to_loader = {
+            "Mask_RCNN_Resnet_50_FPN": self.coco_loader,
+            "RotNet_ResNet_50": self.ssl_loader,  # RotNet and Jigsaw have similar structure.
+            "Jigsaw_ResNet_50": self.ssl_loader,  # So, we can use a unified SSL loader.
+            "Multi_task_RotNet_Mask_RCNN_Resnet50": self.rotnet_multitask_loader
+        }
+
+        return model_to_loader.get(self.model_name, self._unrecognized_model)()
+
+    def _unrecognized_model(self):
+        """
+        Raises an error for unrecognized model names.
+        """
+        raise ValueError(f"Unrecognized model name '{self.model_name}'.")
+
+    def _split_dataset(self, dataset):
+        """
+        Splits a given dataset into train, validation, and test based on configurations.
+        """
+        # ... your splitting logic ...
+
+    def _init_fn_worker(self, seed):
+        """
+        Initializes random seeds for workers.
+        """
+        np.random.seed(seed)
+        random.seed(seed)
+
+    def _create_dataloader(self, dataset, cfg, collate_fn=None):
+        """
+        Utility function to create a DataLoader from a dataset.
+        """
+        gen = torch.Generator()
+        gen.manual_seed(42)  # or any other value
+
+        return torch.utils.data.DataLoader(
+            dataset,
+            batch_size=cfg["batch_size"],
+            shuffle=cfg["shuffle"],
+            num_workers=cfg["num_workers"],
+            worker_init_fn=lambda wid: self._init_fn_worker(42 + wid),  # Unique seed per worker.
+            generator=gen,
+            collate_fn=collate_fn
+        )
+
+    def coco_loader(self):
+        """
+        Creates a DataLoader for the COCO dataset.
+        """
+        # ... your logic ...
+        dataloader = self._create_dataloader(dataset, cfg, COCO_collate_function)
+        return dataloader
+
+    def ssl_loader(self):  # For RotNet and Jigsaw
+        """
+        Creates a DataLoader for Self-Supervised Learning datasets like RotNet and Jigsaw.
+        """
+        DatasetClass = RotNetDataset if self.model_name == "RotNet_ResNet_50" else JigsawDataset
+        # ... your logic ...
+        dataloader = self._create_dataloader(dataset, cfg)
+        return dataloader
+
+    def rotnet_multitask_loader(self):
+        """
+        Creates DataLoaders for multitask training with RotNet and COCO datasets.
+        """
+        # ... your logic ...
+        ssl_dataloader = self._create_dataloader(dataset, cfg)
+        coco_dataloader = self.coco_loader()
+        return [coco_dataloader, ssl_dataloader]
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
 Details
 """
