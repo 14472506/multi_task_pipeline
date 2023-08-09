@@ -2,7 +2,6 @@
 Detials
 """
 # libraries
-import cv2
 import albumentations as A 
 from PIL import Image
 
@@ -32,6 +31,9 @@ class Augmentations():
             return transforms
         if self.loader_type == "Jigsaw":
             transforms = self.Jigsaw_1()
+            return transforms
+        if self.loader_type == "multi_task":
+            transforms = self.Mask_RCNN_Rot()
             return transforms
 
     def Mask_RCNN_1(self):
@@ -76,3 +78,14 @@ class Augmentations():
         ], p=1)
 
         return transforms
+    
+    def Mask_RCNN_Rot(self):
+        """
+        Implementation of Mask R-CNN augmentations
+        """
+        transforms = A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.OneOf([A.RandomBrightnessContrast(p=0.2),                     
+                     A.ToGray(p=0.3)                     
+                     ], p=1)
+        ], p=1, additional_targets={'image0': 'mrcnn_image', 'mask0': 'mask', "image1": "rot_img"})

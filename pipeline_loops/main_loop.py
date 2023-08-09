@@ -7,58 +7,66 @@ optimizer, scheduler, datasets, and logs, and then handles the training, validat
 
 Last Edited by: Bradley Hurst
 """
-# imports
+
+# Standard Libraries
+import logging
+
+# Third-party Libraries
 import torch
+
+# Local Imports
 from models import ModelBuilder
 from optimizer import OptimiserSelector, SchedulerSelector
 from datasets import DataloaderBuilder
 from .loop_selector import LoopSelector
 from pipeline_logging import LogBuilder
-from utils import (best_loss_saver, save_model, save_json,
-                schedule_loader, load_model, garbage_collector)
+from utils import (best_loss_saver, save_model, save_json, 
+                   schedule_loader, load_model, garbage_collector)
 from utils.coco_evaluation import evaluate
-import logging
 
-# Initialize logging configuration
-import logging
-logging.basicConfig(filename="pipeline.log", level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class MainLoop():
+def setup_logging():
+    """Setup logging configuration."""
+    logging.basicConfig(filename="pipeline.log", level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+class MainLoop:
     def __init__(self, cfg, seed=42):
         """Initialize the main loop with given config and seed."""
         self.cfg = cfg
         self.iter_count = 0
         self.best_loss = float('inf')
         
-        # params
-        self.model_cfg = cfg["model"]
-        self.logging_cfg = cfg["logging"]
-        self.optimizer_cfg = cfg["optimizer"]
+        # Extract configurations
+        self._extract_configurations()
 
-        self.device = cfg["loop"]["device"]
-        self.amp = cfg["loop"]["amp"]
-        self.actions = cfg["loop"]["actions"]
-        self.path = cfg["logging"]["path"]
-        self.start = cfg["loop"]["epochs"]["start"]
-        self.end = cfg["loop"]["epochs"]["end"]
-        self.path_name = cfg["logging"]["checkpoint_name"]
-
+        # Initialize main components
         self._initialize_components()
+
+    def _extract_configurations(self):
+        """Extract necessary configurations."""
+        self.model_cfg = self.cfg.get("model", {})
+        self.logging_cfg = self.cfg.get("logging", {})
+        self.optimizer_cfg = self.cfg.get("optimizer", {})
+        self.device = self.cfg.get("loop", {}).get("device", "cpu")
+        self.amp = self.cfg.get("loop", {}).get("amp", False)
+        self.actions = self.cfg.get("loop", {}).get("actions", [])
+        self.path = self.logging_cfg.get("path", "./")
+        self.start = self.cfg.get("loop", {}).get("epochs", {}).get("start", 0)
+        self.end = self.cfg.get("loop", {}).get("epochs", {}).get("end", 0)
+        self.path_name = self.logging_cfg.get("checkpoint_name", "checkpoint")
 
     def _initialize_components(self):
         """Initialize the components (model, optimizer, datasets) based on the config."""
-        # model
+        self._initialize_model()
+        self._initialize_optimizer_and_scheduler()
+        self.logger = LogBuilder(self.logging_cfg).get_logger()
+        self._initialize_data_loops()
+
+    def _initialize_model(self):
+        """Initialize the model."""
         self.model = ModelBuilder(self.model_cfg).model_builder()
         self.model.to(self.device)
-
-        # optimizer and scheduler
-        self._initialize_optimizer_and_scheduler()
-    
-        # logger
-        self.logger = LogBuilder(self.logging_cfg).get_logger()
-        
-        # data loader and loops
-        self._initialize_data_loops()
 
     def _initialize_optimizer_and_scheduler(self):
         """Initialize optimizer and scheduler based on config."""

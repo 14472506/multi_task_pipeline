@@ -5,7 +5,7 @@ from .COCODataset import COCODataset, COCO_collate_function
 from .RotNetDataset import RotNetDataset
 from .JigsawDataset import JigsawDataset
 from .COCO_RotNet_Dataset import COCORotDataset, COCO_collate_function
-from .augmentation_wrappers import RotNetWrapper, JigsawWrapper
+from .augmentation_wrappers import RotNetWrapper, JigsawWrapper, MultiTaskWrapper
 from .augmentations import Augmentations
 
 class DataloaderBuilder():
@@ -41,18 +41,31 @@ class DataloaderBuilder():
         """
         raise ValueError(f"Unrecognized model name '{self.model_name}'.")
 
-    #def _split_dataset(self, dataset):
-    #    """
-    #    Splits a given dataset into train, validation, and test based on configurations.
-    #    """
-    #    # ... your splitting logic ...
+    def _split_dataset(self, dataset):
+        """
+        Splits a given dataset into train, validation, and test based on configurations.
+        """
+        # splitting data into train and test
+        train_base_size = int(len(dataset)*self.dataset_cfg["splits"]["train_test"])
+        test_size = len(dataset) - train_base_size
+        train_base, test = torch.utils.data.random_split(dataset, [train_base_size, test_size]) 
 
-    #def _init_fn_worker(self, seed):
-    #    """
-    #    Initializes random seeds for workers.
-    #    """
-    #    np.random.seed(seed)
-    #    random.seed(seed)
+        # just not doing this if not needed
+        if "train" in self.cfg["loop"]["actions"]:
+            # splitting train into train and val
+            train_size = int(len(train_base)*self.dataset_cfg["splits"]["train_val"])
+            validation_size = len(train_base) - train_size
+            train, validation = torch.utils.data.random_split(train_base, [train_size, validation_size])
+            return [test, train, validation]
+        else:
+            return [test]
+
+    def _init_fn_worker(self, seed):
+        """
+        Initializes random seeds for workers.
+        """
+        np.random.seed(seed)
+        random.seed(seed)
 
     def _create_dataloader(self, dataset, collate_fn=None):
         """
@@ -66,7 +79,7 @@ class DataloaderBuilder():
             batch_size=self.dataset_cfg["params"][self.load_type]["batch_size"],
             shuffle=self.dataset_cfg["params"][self.load_type]["shuffle"],
             num_workers=self.dataset_cfg["params"][self.load_type]["num_workers"],
-            worker_init_fn=lambda wid: self._init_fn_worker(42),  # Unique seed per worker.
+            worker_init_fn=self._init_fn_worker(42),  # Unique seed per worker.
             generator=gen,
             collate_fn=collate_fn
         )
@@ -75,11 +88,6 @@ class DataloaderBuilder():
         """
         Creates a DataLoader for the COCO dataset.
         """
-        
-        def init_fn_worker(seed):
-            np.random.seed(seed)
-            random.seed(seed)
-
         gen = torch.Generator()
         gen.manual_seed(self.seed)
 
@@ -99,40 +107,25 @@ class DataloaderBuilder():
         DatasetClass = RotNetDataset if self.model_name == "RotNet_ResNet_50" else JigsawDataset
         aug_type = "RotNet" if self.model_name == "RotNet_ResNet50" else "Jigsaw"                 # this is messy as fuck
 
-        def init_fn_worker(seed):
-            np.random.seed(seed)
-            random.seed(seed)
-
         gen = torch.Generator()
         gen.manual_seed(self.seed)
 
-        # get all data 
+        # dataset
         all_data = DatasetClass(self.dataset_cfg, self.seed)
-
-        # splitting data into train and test
-        train_base_size = int(len(all_data)*self.dataset_cfg["splits"]["train_test"])
-        test_size = len(all_data) - train_base_size
-        train_base, test = torch.utils.data.random_split(all_data, [train_base_size, test_size]) 
-
-        # just not doing this if not needed
-        if "train" in self.cfg["loop"]["actions"]:
-            # splitting train into train and val
-            train_size = int(len(train_base)*self.dataset_cfg["splits"]["train_val"])
-            validation_size = len(train_base) - train_size
-            train, validation = torch.utils.data.random_split(train_base, [train_size, validation_size])
+        splits = self._split_dataset(all_data)
         
         # selecting only 
         if self.load_type == "test":
-            dataset = test
+            dataset = splits[0]
         if self.load_type == "train":
-            dataset = train
+            dataset = splits[1]
             if self.augment == True:
                 Aug_loader = Augmentations(aug_type)
                 Augs = Aug_loader.aug_loader()
-                train == RotNetWrapper(train, Augs)
+                dataset == RotNetWrapper(dataset, Augs)
                 print("augs applied")
         if self.load_type == "val":
-            dataset = validation
+            dataset = splits[2]
 
         dataloader = self._create_dataloader(dataset)
         return dataloader
@@ -141,20 +134,31 @@ class DataloaderBuilder():
         """
         Creates DataLoaders for multitask training with RotNet and COCO datasets.
         """
-        # ... your logic ...
-        ssl_dataloader = self._create_dataloader(dataset, cfg)
-        coco_dataloader = self.coco_loader()
-        return [coco_dataloader, ssl_dataloader]
+        gen = torch.Generator()
+        gen.manual_seed(self.seed)        
+
+        cfg = {
+            "type": self.load_type,
+            "source": self.dataset_cfg["source"],
+            "rotnet": self.dataset_cfg["rotnet"]["params"][self.load_type],
+            "mask_rcnn": self.dataset_cfg["mask_rcnn"]["params"][self.load_type]
+        }
+        
+        dataset = COCORotDataset(cfg, self.seed)
+
+        if self.dataset_cfg["mask_rcnn"]["params"][self.load_type]["augment"]:
+            Aug_loader = Augmentations("multi_task")
+            Augs = Aug_loader.aug_loader()
+            dataset = MultiTaskWrapper(dataset, Augs)
+            print("augs applied")
+        
+        dataloader = self._create_dataloader(dataset, cfg, COCO_collate_function)
+        return dataloader
 
 """
-    def rotnet_multitask_loader(self, seed=42):
 
-        def init_fn_worker(seed):
-            np.random.seed(seed)
-            random.seed(seed)
 
-        gen = torch.Generator()
-        gen.manual_seed(seed)
+
 
         # ----- RotNet loader for RotNet -------------------------------------------------------- #
         # get all data 
