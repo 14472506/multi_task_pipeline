@@ -5,10 +5,13 @@ import os
 
 class OptimiserSelector():
     def __init__(self, cfg, model, seed=42):
-        self.cfg = cfg
         self.model = model
         self.seed = seed
         self.set_seed()
+
+        # params
+        self.opt_name = cfg["name"]
+        self.lr = cfg["params"]["lr"]
 
     def set_seed(self):
         """
@@ -24,7 +27,7 @@ class OptimiserSelector():
 
     def _get_adam_optimizer(self):
         """Retrieve the Adam optimizer based on the configuration."""
-        return torch.optim.Adam(self.model.parameters(), lr=self.cfg["opt_lr"])
+        return torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
     def _validate_config(self, opt_name):
         """Validate the configuration for the optimizer."""
@@ -39,7 +42,7 @@ class OptimiserSelector():
             # Add other optimizers here as needed
         }
         
-        opt_name = self.cfg["opt_name"]
+        opt_name = self.opt_name
         
         if opt_name not in optimizer_mapping:
             raise ValueError(f"Optimizer '{opt_name}' not supported. Add the optimizer method to the class and update the mapping.")
@@ -65,7 +68,7 @@ class OptimiserSelector():
 
 """
 Detials
-"""
+
 # imports
 import torch
 import numpy as np
@@ -79,9 +82,7 @@ class OptimiserSelector():
         self.seed=seed
 
     def set_seed(self):
-        """
-        Details
-        """
+
         random.seed(self.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
@@ -91,10 +92,8 @@ class OptimiserSelector():
         os.environ['PYTHONHASHSEED'] = str(self.seed)
 
     def get_optimizer(self):
-        """
-        Detials
-        """
+
         if self.cfg["opt_name"] == "Adam":
             optimizer =  torch.optim.Adam(self.model.parameters(), lr=self.cfg["opt_lr"])
             return optimizer
-
+"""

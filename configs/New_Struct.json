@@ -4,7 +4,7 @@
         "description": "Base configuration for RotNet_ResNet_50 training on All_RGB dataset."
     },
     "model": {
-        "name": "RotNet_ResNet_50",
+        "model_name": "RotNet_ResNet_50",
         "params": {
             "backbone_type": "pre-trained",
             "num_rotations": 4,
@@ -20,6 +20,7 @@
             "train_val": 0.8
         },
         "params": {
+            "num_rotations": 4,
             "train": {
                 "batch_size": 4,
                 "shuffle": true,
@@ -66,7 +67,7 @@
     },
     "logging": {
         "logger": "base_logger",
-        "path": "outputs/All_RGB_SSL/rotnet_pt",
+        "path": "outputs/TEST_DEV/rotnet_pt",
         "checkpoint_name": "rotnet_best.pth"
     }
 }

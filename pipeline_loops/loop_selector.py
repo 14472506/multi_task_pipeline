@@ -50,7 +50,7 @@ class LoopSelector():
         Get the required loop based on the loop_type (train, val, test) and self.cfg["loop_type"]
         """
         try:
-            return self.loop_mappings[self.cfg["loop_type"]][loop_type]
+            return self.loop_mappings[self.cfg["type"]][loop_type]
         except KeyError:
             raise ValueError(f"Invalid loop type {self.cfg['loop_type']} or {loop_type}")
 
@@ -81,7 +81,7 @@ class LoopSelector():
 
 """
 Details
-"""
+
 # imports
 from .instance_loops import (inst_train_loop, 
                              inst_val_loop,
@@ -94,13 +94,9 @@ from .multi_task_dev_3 import(multi_train_loop,
                              multi_test_loop)
 
 class LoopSelector():
-    """
-    Details
-    """
+
     def __init__(self, cfg):
-        """
-        Detials
-        """
+
         self.cfg = cfg
 
     def get_train(self):
@@ -127,7 +123,7 @@ class LoopSelector():
             return inst_test_loop
         if self.cfg["loop_type"] == "multi_task":
             return multi_test_loop
-
+"""
     
 
 

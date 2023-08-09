@@ -17,10 +17,13 @@ class RotNetDataset(data.Dataset):
     """
     Detials
     """
-    def __init__(self, root, num_rotations, seed=42):
+    def __init__(self, cfg, seed=42):
+
+        self.root = cfg["source"]
+        self.num_rotations= cfg["params"]["num_rotations"]
 
         # retrieveing image data from root directory
-        self.root = os.path.expanduser(root)
+        self.root = os.path.expanduser(self.root)
         self.images = []
         for image in os.listdir(self.root):
             self.images.append(image)
@@ -29,8 +32,8 @@ class RotNetDataset(data.Dataset):
         np.random.seed(seed)
 
         # rotnet stuff
-        self.rotation_degrees = np.linspace(0, 360, num_rotations + 1).tolist()[:-1]
-        self.num_rotations = num_rotations
+        self.rotation_degrees = np.linspace(0, 360, self.num_rotations + 1).tolist()[:-1]
+        self.num_rotations = self.num_rotations
         self.seed = seed
 
     def __getitem__(self, idx):

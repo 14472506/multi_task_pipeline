@@ -35,9 +35,9 @@ def main(config_file):
 
     cfg["logging"]["path"] = cfg["logging"]["path"] + "_1"
     loop = MainLoop(cfg)
-    if cfg["loop"]["train"]:
+    if "train" in cfg["loop"]["actions"]:
         loop.train()
-    if cfg["loop"]["test"]:        
+    if "test" in cfg["loop"]["actions"]:        
         loop.test()
 
 if __name__ == "__main__":
