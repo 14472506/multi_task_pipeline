@@ -28,9 +28,10 @@ class COCORotDataset(data.Dataset):
     """
     Detials
     """
-    def __init__(self, cfg, seed=42):
+    def __init__(self, cfg, type, seed=42):
         self.cfg = cfg
         self.seed = seed
+        self.type = type
 
         self._extract_config()
 
@@ -38,21 +39,19 @@ class COCORotDataset(data.Dataset):
 
     def _extract_config(self):
         """Detials"""
-        self.type = self.cfg.get("type", "")
-        self.source = self.cfg.get("source", "")
-        self.rotnet_cfg = self.cfg.get("rotnet", {})  
-        self.mask_rcnn_cfg = self.cfg.get("mask_rcnn", {})
+        self.source = self.cfg.get("source_joint", "")
+        self.params = self.cfg.get("params", "")
 
     def _initialize_params(self):
         """Detials"""
         self.coco = COCO(os.path.join(
                 self.source,
-                self.mask_rcnn_cfg.get("dir", ""),
-                self.mask_rcnn_cfg.get("json", "")
+                self.params.get(self.type, "").get("dir", ""),
+                self.params.get(self.type, "").get("json", "")
             ))
-        self.dir = os.path.join(self.source, self.mask_rcnn_cfg.get("dir", ""))
-        self.ids = list(self.coco.imgs.key())
-        self.num_rotations = self.rotnet_cfg.get("num_rotations", 0)
+        self.dir = os.path.join(self.source, self.params.get(self.type, "").get("dir", ""))
+        self.ids = list(self.coco.imgs.keys())
+        self.num_rotations = self.params.get("num_rotations", 0)
         self.rot_deg = np.linspace(0, 360, self.num_rotations + 1).tolist()[:-1]
 
     def __getitem__(self, idx):
@@ -101,10 +100,10 @@ class COCORotDataset(data.Dataset):
         # building target_dict
         target["boxes"] = torch.as_tensor(boxes, dtype=torch.float32)
         target["labels"] = torch.as_tensor(labels, dtype=torch.int64)
-        target["masks"] = torch.as_tensor(areas, dtype=torch.int64)
-        target["image_id"] = torch.stack(masks_list, 0)
-        target["area"] = torch.as_tensor(iscrowds, dtype=torch.int64)
-        target["iscrowd"] = torch.tensor([idx])
+        target["masks"] = torch.stack(masks_list, 0)
+        target["image_id"] = torch.tensor([idx])
+        target["area"] = torch.as_tensor(areas, dtype=torch.int64)
+        target["iscrowd"] = torch.as_tensor(iscrowds, dtype=torch.int64)
 
         return(target)
 
@@ -115,7 +114,8 @@ class COCORotDataset(data.Dataset):
         rot_img = resize(rot_img)
 
         # conver image to tensore
-        tensor = self._to_tensor(rot_img)
+        tensor = self._to_tensor(rot_img).unsqueeze(0)
+        dtype = tensor.dtype
 
         # generate rotation angle
         theta_idx = np.random.choice(self.rot_deg, size=1)[0]
@@ -125,23 +125,26 @@ class COCORotDataset(data.Dataset):
         # get z axis rotation matrix
         rotation_matrix = torch.tensor([[torch.cos(theta), -torch.sin(theta), 0],
                                         [torch.sin(theta), torch.cos(theta), 0]])
-        rotation_matrix = rotation_matrix[None, ...].type(tensor.dtype).repeat(tensor.shape[0], 1, 1)
-
-        # rotate tensor
+        rotation_matrix = rotation_matrix[None, ...].type(dtype).repeat(tensor.shape[0], 1, 1)
+        
+        # appling rotation
         grid = F.affine_grid(rotation_matrix,
                                      tensor.shape,
-                                     align_corners=True).type(tensor.dtype)
-        rotated_tensor = F.grid_sample(tensor, grid, align_corners=True)
+                                     align_corners=True).type(dtype)
+        rotated_torch_tensor = F.grid_sample(tensor, grid, align_corners=True)
 
         target = torch.zeros(self.num_rotations)
         target[self.rot_deg.index(theta_idx)] = 1
 
-        return rotated_tensor, target
+        return rotated_torch_tensor, target
 
     def _to_tensor(self, img):
         transform = T.ToTensor()
         ten_img = transform(img)
         return ten_img
+    
+    def __len__(self):
+        return len(self.ids)
   
 def COCO_collate_function(batch):
     """Detials"""

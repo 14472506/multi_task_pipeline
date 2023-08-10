@@ -85,7 +85,12 @@ class Augmentations():
         """
         transforms = A.Compose([
             A.HorizontalFlip(p=0.5),
-            A.OneOf([A.RandomBrightnessContrast(p=0.2),                     
-                     A.ToGray(p=0.3)                     
-                     ], p=1)
-        ], p=1, additional_targets={'image0': 'mrcnn_image', 'mask0': 'mask', "image1": "rot_img"})
+            A.OneOf([
+                A.RandomBrightnessContrast(p=0.2),
+                #A.ToGray(p=0.3)
+            ], p=1),
+            A.ToGray(p=1),
+            A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=30, p=0.2)
+        ], p=1)
+
+        return transforms

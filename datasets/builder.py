@@ -18,7 +18,10 @@ class DataloaderBuilder():
         self.dataset_cfg = cfg["dataset"]
         self.model_cfg = cfg["model"] 
         self.load_type = load_type
-        self.augment = self.dataset_cfg["params"][self.load_type]["augment"]
+        try:
+            self.augment = self.dataset_cfg["params"][self.load_type]["augment"]
+        except KeyError:
+            pass
         self.model_name = self.model_cfg["model_name"]
         self.seed = 42
 
@@ -30,7 +33,7 @@ class DataloaderBuilder():
             "Mask_RCNN_Resnet_50_FPN": self.coco_loader,
             "RotNet_ResNet_50": self.ssl_loader,  # RotNet and Jigsaw have similar structure.
             "Jigsaw_ResNet_50": self.ssl_loader,  # So, we can use a unified SSL loader.
-            "Multi_task_RotNet_Mask_RCNN_Resnet50": self.rotnet_multitask_loader
+            "RotMaskRCNN_MultiTask": self.rotnet_multitask_loader
         }
 
         return model_to_loader.get(self.model_name, self._unrecognized_model)()
@@ -137,28 +140,18 @@ class DataloaderBuilder():
         gen = torch.Generator()
         gen.manual_seed(self.seed)        
 
-        cfg = {
-            "type": self.load_type,
-            "source": self.dataset_cfg["source"],
-            "rotnet": self.dataset_cfg["rotnet"]["params"][self.load_type],
-            "mask_rcnn": self.dataset_cfg["mask_rcnn"]["params"][self.load_type]
-        }
-        
-        dataset = COCORotDataset(cfg, self.seed)
+        dataset = COCORotDataset(self.dataset_cfg, self.load_type, self.seed)
 
-        if self.dataset_cfg["mask_rcnn"]["params"][self.load_type]["augment"]:
+        if self.dataset_cfg["params"][self.load_type]["augment"]:
             Aug_loader = Augmentations("multi_task")
             Augs = Aug_loader.aug_loader()
             dataset = MultiTaskWrapper(dataset, Augs)
             print("augs applied")
         
-        dataloader = self._create_dataloader(dataset, cfg, COCO_collate_function)
+        dataloader = self._create_dataloader(dataset, COCO_collate_function)
         return dataloader
 
 """
-
-
-
 
         # ----- RotNet loader for RotNet -------------------------------------------------------- #
         # get all data 

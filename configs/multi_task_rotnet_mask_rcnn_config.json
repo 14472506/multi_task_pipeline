@@ -15,61 +15,39 @@
             }
     },   
     "dataset":{
-        "source": "datasets/sources/jersey_dataset_v4",
-        "rotnet":{
+        "source_ssl": "dataset/sources/All_RGB",
+        "source_joint": "datasets/sources/jersey_dataset_v4",
+        "params":{
             "split":{
                 "train_test": 0.8,
                 "train_val": 0.8
                 },
             "num_rotations": 4,
-            "params":{
-                "train":{
-                    "batch_size": 4,
-                    "shuffle": true,
-                    "num_workers": 0,
-                    "augment": true
-                },
-                "val":{
-                    "batch_size": 1,
-                    "shuffle": false,
-                    "num_workers": 0,
-                    "augment": false
-                },
-                "test":{
-                    "batch_size": 1,
-                    "shuffle": false,
-                    "num_workers": 0,
-                    "augment": false
-                }
+            "train":{
+                "dir": "train",
+                "json": "train.json",
+                "batch_size": 1,
+                "shuffle": true,
+                "num_workers": 0,
+                "augment": true
+            },
+            "val":{
+                "dir": "val",
+                "json": "val.json",
+                "batch_size": 1,
+                "shuffle": false,
+                "num_workers": 0,
+                "augment": false
+            },
+            "test":{
+                "dir": "test",
+                "json_dir": "test.json",
+                "batch_size": 1,
+                "shuffle": false,
+                "num_workers": 0,
+                "augment": false
             }
-        },
-        "mask_rcnn":{
-            "params":{
-                "train":{
-                    "dir": "train",
-                    "json": "train.json",
-                    "batch_size": 1,
-                    "shuffle": true,
-                    "num_workers": 0,
-                    "augment": true
-                },
-                "val":{
-                    "dir": "val",
-                    "json": "val.json",
-                    "batch_size": 1,
-                    "shuffle": false,
-                    "num_workers": 0,
-                    "augment": false
-                },
-                "test":{
-                    "dir": "test",
-                    "json_dir": "test.json",
-                    "batch_size": 1,
-                    "shuffle": false,
-                    "num_workers": 0,
-                    "augment": false
-                }
-            }
+
         }
     },
     "optimizer": {
