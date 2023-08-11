@@ -130,7 +130,8 @@ class MultiTaskWrapper(torch.utils.data.Dataset):
         """Details"""
         # Getting image
         mrcnn_tensor, mrcnn_target, rot_tensor, rot_target = self.dataset[idx]
-    
+
+        # converting tensors to arrays
         to_img = T.ToPILImage()        
         mrcnn_img = to_img(mrcnn_tensor)
         rot_img = to_img(rot_tensor.squeeze(0))
@@ -139,56 +140,56 @@ class MultiTaskWrapper(torch.utils.data.Dataset):
         rot_arr = np.array(rot_img)
 
         np_masks = []
-
-        for mask in mrcnn_target["masks"]: 
+        for mask, box in zip(mrcnn_target["masks"], mrcnn_target["boxes"]): 
             mask_img = to_img(mask)
-            mask_array = np.array(mask_img)
-            np_masks.append(mask_array)
-        
-        all_data = [mrcnn_arr] + [rot_arr] + np_masks
+            # append values to accumulated lists
+            np_masks.append(np.array(mask_img))
 
-        augmented_data = []
-        for i in all_data:
-            transformed = self.transforms(image=i)['image']
-            augmented_data.append(transformed)
 
-        auged_mrcnn = augmented_data[0]
-        auged_rot = augmented_data[1]
+        # applying augmentations
+        aug_data = self.transforms(image=mrcnn_arr, image0=rot_arr, masks=np_masks)
 
-        masks = augmented_data[2:]
-        boxes = []
-        masks_list = []
-        for mask in masks:
-            print(mask)
-            np.savetxt("mask.csv", mask, delimiter=",")
-            boxes.append(self._mask_to_box(mask))
-            masks_list.append(torch.from_numpy(mask))
-        
-        mrcnn_target["boxes"] = torch.as_tensor(boxes, dtype=torch.float32)
-        mrcnn_target["masks"] = torch.stack(masks_list, 0)
+        boxes_list = []
+        for mask in aug_data["masks"]:
+            box = self._mask_to_bbox(mask)
+            if box == None:
+                pass
+            else:
+                boxes_list.append(box)
 
-        mrcnn_transformed = torch.from_numpy(auged_mrcnn)
-        rot_transformed = torch.from_numpy(auged_rot)
-
-        print("APPLIED")
+        # extracting auged data
+        mrcnn_transformed = torch.from_numpy(aug_data["image"])
+        rot_transformed = torch.from_numpy(aug_data["image0"])
+        mrcnn_target["masks"] = torch.stack([torch.tensor(arr) for arr in aug_data["masks"]])
+        mrcnn_target["boxes"] = torch.as_tensor(boxes_list, dtype=torch.float32)
         
         return mrcnn_transformed, mrcnn_target, rot_transformed, rot_target
     
-    def _mask_to_box(self, binary_mask):
-        """Detials"""
-        # Find the rows and columns that contain True values
-        rows = np.any(binary_mask, axis=1)
-        cols = np.any(binary_mask, axis=0)
-    
-        # Find the minimum and maximum row and column indices
-        y_min, y_max = np.where(rows)[0][[0, -1]]
-        x_min, x_max = np.where(cols)[0][[0, -1]]
+    def _mask_to_bbox(self, binary_mask):
+        """
+        Convert binary mask to bounding box.
 
-        # Compute width and height
-        bbox_width = x_max - x_min + 1
-        bbox_height = y_max - y_min + 1
+        Args:
+        - binary_mask (np.ndarray): 2D numpy array with binary values. 1 represents the object and 0 represents the background.
 
-        return [x_min, y_min, bbox_width, bbox_height]
+        Returns:
+        - bbox (tuple): (x_min, y_min, x_max, y_max) coordinates of the bounding box.
+        """
+
+        # Get the axis indices where mask is active (i.e., equals 1)
+        rows, cols = np.where(binary_mask == 1)
+
+        # If no active pixels found, return None
+        if len(rows) == 0 or len(cols) == 0:
+            return None
+
+        # Determine the bounding box coordinates
+        x_min = np.min(cols)
+        y_min = np.min(rows)
+        x_max = np.max(cols)
+        y_max = np.max(rows)
+
+        return [x_min, y_min, x_max - x_min, y_max - y_min]
         
     def __len__(self):
         """Details"""
