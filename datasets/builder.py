@@ -49,14 +49,14 @@ class DataloaderBuilder():
         Splits a given dataset into train, validation, and test based on configurations.
         """
         # splitting data into train and test
-        train_base_size = int(len(dataset)*self.dataset_cfg["splits"]["train_test"])
+        train_base_size = int(len(dataset)*self.dataset_cfg["params"]["splits"]["train_test"])
         test_size = len(dataset) - train_base_size
         train_base, test = torch.utils.data.random_split(dataset, [train_base_size, test_size]) 
 
         # just not doing this if not needed
         if "train" in self.cfg["loop"]["actions"]:
             # splitting train into train and val
-            train_size = int(len(train_base)*self.dataset_cfg["splits"]["train_val"])
+            train_size = int(len(train_base)*self.dataset_cfg["params"]["splits"]["train_val"])
             validation_size = len(train_base) - train_size
             train, validation = torch.utils.data.random_split(train_base, [train_size, validation_size])
             return [test, train, validation]
@@ -140,16 +140,41 @@ class DataloaderBuilder():
         gen = torch.Generator()
         gen.manual_seed(self.seed)        
 
-        dataset = COCORotDataset(self.dataset_cfg, self.load_type, self.seed)
+        COCO_dataset = COCORotDataset(self.dataset_cfg, self.load_type, self.seed)
 
         if self.dataset_cfg["params"][self.load_type]["augment"]:
-            Aug_loader = Augmentations("multi_task")
-            Augs = Aug_loader.aug_loader()
-            dataset = MultiTaskWrapper(dataset, Augs)
+            COCO_Aug_loader = Augmentations("multi_task")
+            COCO_Augs = COCO_Aug_loader.aug_loader()
+            COCO_dataset = MultiTaskWrapper(COCO_dataset, COCO_Augs)
             print("augs applied")
         
-        dataloader = self._create_dataloader(dataset, COCO_collate_function)
-        return dataloader
+        COCO_dataloader = self._create_dataloader(COCO_dataset, COCO_collate_function)
+
+        # ROTNET STUFF
+
+        self.dataset_cfg["params"]["train"]["batch_size"] = self.dataset_cfg["params"]["train"]["ssl_batch_size"]
+        self.dataset_cfg["params"]["test"]["batch_size"] = self.dataset_cfg["params"]["test"]["ssl_batch_size"]
+        self.dataset_cfg["params"]["val"]["batch_size"] = self.dataset_cfg["params"]["val"]["ssl_batch_size"]
+
+        all_data = RotNetDataset(self.dataset_cfg, self.seed)
+        splits = self._split_dataset(all_data)
+        
+        # selecting only 
+        if self.load_type == "test":
+            RotNet_dataset = splits[0]
+        if self.load_type == "train":
+            RotNet_dataset = splits[1]
+            if self.augment == True:
+                RotNet_Aug_loader = Augmentations("RotNet")
+                RotNet_Augs = RotNet_Aug_loader.aug_loader()
+                RotNet_dataset == RotNetWrapper(RotNet_dataset, RotNet_Augs)
+                print("augs applied")
+        if self.load_type == "val":
+            RotNet_dataset = splits[2]
+
+        RotNet_dataloader = self._create_dataloader(RotNet_dataset)
+
+        return [COCO_dataloader, RotNet_dataloader]
 
 """
 

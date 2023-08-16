@@ -9,6 +9,74 @@ from utils import classification_loss as criterion
 from utils.coco_evaluation import evaluate
 from utils import garbage_collector
 
+# training loop
+def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, iter_count, epoch):
+    """ implementing multi class training loop """
+
+    # set model to train
+    model.train()
+    
+    # init loader detials
+    joint_loader, ssl_loader = loader
+    joint_iter = iter(joint_loader)
+    ssl_iter = iter(ssl_loader) 
+
+    # loop over labelled dataset
+    for i in range(len(joint_iter)):
+
+        # collect iteration data
+        joint_img, joint_masks, joint_ssl_img, joint_ssl_target = next(joint_iter)
+        joint_img = list(image.to(device) for image in joint_img)
+        joint_masks = [{k: v.to(device) for k, v in t.items()} for t in joint_masks]
+        joint_ssl_img = list(image.to(device) for image in joint_ssl_img)
+        joint_ssl_target = list(label.to(device) for label in joint_ssl_target)
+
+        ssl_img, ssl_target = next(ssl_iter) 
+        ssl_img = list(image.to(device) for image in ssl_img)
+        ssl_target = list(label.to(device) for label in ssl_target)
+
+        # get model output
+        with torch.autocast(device_type='cuda', dtype=torch.float16):
+            joint_sup_loss_dict = model(joint_img, joint_masks)
+            joint_sup_losses = sum(loss for loss in joint_sup_loss_dict.values())
+            joint_ssl_pred = model(joint_ssl_img)
+            joint_ssl_loss = criterion(joint_ssl_pred, joint_ssl_target)
+            ssl_pred = model(ssl_img)
+            ssl_loss = criterion(ssl_pred, ssl_target)
+        
+        # weighted losses
+        # weighted_losses = AWL(joint_sup_losses, joint_ssl_loss, ssl_loss)
+
+        scaler.scale(weighted_losses).backward()
+
+        scaler.step(optimizer)
+        scaler.update()
+        
+        #losses.backward()
+        #optimizer.step()
+        optimizer.zero_grad()
+        
+        # reporting
+        loop_loss_acc += losses.item()
+        train_reporter(iter_count, device, losses.item(), epoch, "mrcnn")
+        iter_count += 1
+
+        garbage_collector()
+
+    logger["train_loss"].append(loop_loss_acc/len(loader)) 
+
+
+
+
+
+
+
+
+
+
+
+
+
 # basic loops
 def multi_train_loop(model, loader, optimizer, scaler, logger, device ,iter_count, epoch):
     """

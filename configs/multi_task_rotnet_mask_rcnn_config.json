@@ -15,10 +15,10 @@
             }
     },   
     "dataset":{
-        "source_ssl": "dataset/sources/All_RGB",
+        "source": "datasets/sources/All_RGB",
         "source_joint": "datasets/sources/jersey_dataset_v4",
         "params":{
-            "split":{
+            "splits":{
                 "train_test": 0.8,
                 "train_val": 0.8
                 },
@@ -27,6 +27,7 @@
                 "dir": "train",
                 "json": "train.json",
                 "batch_size": 1,
+                "ssl_batch_size": 4,
                 "shuffle": true,
                 "num_workers": 0,
                 "augment": true
@@ -35,6 +36,7 @@
                 "dir": "val",
                 "json": "val.json",
                 "batch_size": 1,
+                "ssl_batch_size": 4,
                 "shuffle": false,
                 "num_workers": 0,
                 "augment": false
@@ -43,6 +45,7 @@
                 "dir": "test",
                 "json_dir": "test.json",
                 "batch_size": 1,
+                "ssl_batch_size": 4,
                 "shuffle": false,
                 "num_workers": 0,
                 "augment": false

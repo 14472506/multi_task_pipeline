@@ -21,12 +21,15 @@ class LoaderTest():
 
     def _initialise_loader(self):
         """Detials"""
-        self.loader = DataloaderBuilder(self.cfg, "train").loader()
+        self.loader1, self.loader2 = DataloaderBuilder(self.cfg, "train").loader()
+        print(len(self.loader1))
+        print(len(self.loader2))
     
     def test_loader(self):
         """Detials"""
         for i, data in enumerate(self.loader):
 
+            print(data)
             s_tens, s_targ, ssl_tens, ssl_targ = data
             #print(s_targ)
 
