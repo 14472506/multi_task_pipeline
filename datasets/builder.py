@@ -151,7 +151,6 @@ class DataloaderBuilder():
         COCO_dataloader = self._create_dataloader(COCO_dataset, COCO_collate_function)
 
         # ROTNET STUFF
-
         self.dataset_cfg["params"]["train"]["batch_size"] = self.dataset_cfg["params"]["train"]["ssl_batch_size"]
         self.dataset_cfg["params"]["test"]["batch_size"] = self.dataset_cfg["params"]["test"]["ssl_batch_size"]
         self.dataset_cfg["params"]["val"]["batch_size"] = self.dataset_cfg["params"]["val"]["ssl_batch_size"]
@@ -175,65 +174,3 @@ class DataloaderBuilder():
         RotNet_dataloader = self._create_dataloader(RotNet_dataset)
 
         return [COCO_dataloader, RotNet_dataloader]
-
-"""
-
-        # ----- RotNet loader for RotNet -------------------------------------------------------- #
-        # get all data 
-        all_data = RotNetDataset(self.cfg["dataset"]["rotnet"]["dir"], self.cfg["model"]["num_rotations"],)
-
-        # splitting data into train and test
-        train_base_size = int(len(all_data)*self.cfg["dataset"]["rotnet"]["train_test_split"])
-        test_size = len(all_data) - train_base_size
-        train_base, test = torch.utils.data.random_split(all_data, [train_base_size, test_size]) 
-
-        # just not doing this if not needed
-        if self.cfg["loop"]["train"]:
-            # splitting train into train and val
-            train_size = int(len(train_base)*self.cfg["dataset"]["rotnet"]["train_val_split"])
-            validation_size = len(train_base) - train_size
-            train, validation = torch.utils.data.random_split(train_base, [train_size, validation_size])
-        
-        # selecting only 
-        if self.load_type == "test":
-            dataset = test
-        if self.load_type == "train":
-            dataset = train
-            if self.augment == True:
-                Aug_loader = Augmentations("RotNet")
-                Augs = Aug_loader.aug_loader()
-                train == RotNetWrapper(train, Augs)
-                print("augs applied")
-        if self.load_type == "val":
-            dataset = validation
-        
-        # getting specific loader config based on loader type
-        cfg = self.cfg["dataset"]["rotnet"][self.load_type]
-        
-        ssl_dataloader = torch.utils.data.DataLoader(dataset,
-            batch_size = cfg["batch_size"],
-            shuffle = cfg["shuffle"],
-            num_workers = cfg["num_workers"],
-            worker_init_fn = init_fn_worker,
-            generator = gen)
-
-        # ----- COCO loader for Mask-RCNN ------------------------------------------------------- #
-        cfg = self.cfg["dataset"]["mask_rcnn"][self.load_type]
-        if cfg["augment"] == True:
-            dataset = COCODataset(cfg["dir"], cfg["json_dir"], transforms=True, train=True)
-        else:
-            dataset = COCODataset(cfg["dir"], cfg["json_dir"])
-
-        dataloader = torch.utils.data.DataLoader(dataset,
-            batch_size = cfg["batch_size"],
-            shuffle = cfg["shuffle"],
-            num_workers = cfg["num_workers"],
-            worker_init_fn = init_fn_worker,
-            generator = gen,
-            collate_fn = COCO_collate_function)
-
-        loaders = [dataloader, ssl_dataloader]
-
-        # returning loaders
-        return loaders
-"""

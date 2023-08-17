@@ -12,10 +12,10 @@ from .classification_loops import (
     class_val_loop,
     class_test_loop
 )
-from .multi_task_dev_3 import (
-    multi_train_loop,
-    multi_val_loop,
-    multi_test_loop
+from .multi_task_dev_1 import (
+    multi_task_training_loop,
+    multi_task_validation_loop,
+    multi_task_testing_loop
 )
 
 class LoopSelector():
@@ -39,9 +39,9 @@ class LoopSelector():
                 "test": class_test_loop
             },
             "multi_task": {
-                "train": multi_train_loop,
-                "val": multi_val_loop,
-                "test": multi_test_loop
+                "train": multi_task_training_loop,
+                "val": multi_task_validation_loop,
+                "test": multi_task_testing_loop
             }
         }
 

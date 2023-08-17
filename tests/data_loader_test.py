@@ -27,7 +27,7 @@ class LoaderTest():
     
     def test_loader(self):
         """Detials"""
-        for i, data in enumerate(self.loader):
+        for i, data in enumerate(self.loader1):
 
             print(data)
             s_tens, s_targ, ssl_tens, ssl_targ = data

@@ -114,29 +114,42 @@ class COCORotDataset(data.Dataset):
         rot_img = resize(rot_img)
 
         # conver image to tensore
-        tensor = self._to_tensor(rot_img).unsqueeze(0)
-        dtype = tensor.dtype
+        tensor = self._to_tensor(rot_img)
 
         # generate rotation angle
-        theta_idx = np.random.choice(self.rot_deg, size=1)[0]
-        theta = theta_idx*(np.pi/180)
+        theta = np.random.choice(self.rot_deg, size=1)[0]
+
+        rotated_image_tensor = self.rotate_image(tensor.unsqueeze(0), theta).squeeze(0)
+
+        target = torch.zeros(self.num_rotations)
+        target[self.rot_deg.index(theta)] = 1
+
+        return rotated_image_tensor, target
+    
+    def rotate_image(self, image_tensor, theta):
+        """
+        Detials
+        """
+        # get tensor image data type
+        dtype = image_tensor.dtype
+
+        # covert degrees to radians and converting to tensor
+        theta *= np.pi/180
         theta = torch.tensor(theta)
 
-        # get z axis rotation matrix
+        # retrieveing rotation matrix around the z axis
         rotation_matrix = torch.tensor([[torch.cos(theta), -torch.sin(theta), 0],
                                         [torch.sin(theta), torch.cos(theta), 0]])
-        rotation_matrix = rotation_matrix[None, ...].type(dtype).repeat(tensor.shape[0], 1, 1)
+        rotation_matrix = rotation_matrix[None, ...].type(dtype).repeat(image_tensor.shape[0], 1, 1)
         
         # appling rotation
         grid = F.affine_grid(rotation_matrix,
-                                     tensor.shape,
+                                     image_tensor.shape,
                                      align_corners=True).type(dtype)
-        rotated_torch_tensor = F.grid_sample(tensor, grid, align_corners=True)
+        rotated_torch_image = F.grid_sample(image_tensor, grid, align_corners=True)
 
-        target = torch.zeros(self.num_rotations)
-        target[self.rot_deg.index(theta_idx)] = 1
-
-        return rotated_torch_tensor, target
+        # returning rotated image tensor
+        return rotated_torch_image
 
     def _to_tensor(self, img):
         transform = T.ToTensor()

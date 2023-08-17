@@ -72,7 +72,7 @@
             "start": 0,
             "end": 45
         },
-        "type": "classification",
+        "type": "multi_task",
         "device": "cuda:0",
         "scheduler": true,
         "amp": false
