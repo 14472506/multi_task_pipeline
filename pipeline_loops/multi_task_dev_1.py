@@ -10,7 +10,7 @@ from utils import garbage_collector
 import torch.nn.functional as F
 
 # training loop
-def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, iter_count, epoch):
+def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, iter_count, epoch, awl=None):
     """ implementing multi class training loop """
     model.train()
     
@@ -18,6 +18,8 @@ def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, i
     joint_loader, ssl_loader = loader
     joint_iter = iter(joint_loader)
     ssl_iter = iter(ssl_loader)
+
+    loop_loss_acc = 0
 
     # loop over labelled dataset
     for i in range(len(joint_iter)):
@@ -37,36 +39,28 @@ def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, i
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             joint_sup_loss_dict = model(joint_img, joint_masks, task="supervised")
             joint_sup_losses = sum(loss for loss in joint_sup_loss_dict.values())
-            print("mrcnn done")
             joint_ssl_pred = model(joint_ssl_img, task="self_supervised")
             joint_ssl_loss = F.cross_entropy(joint_ssl_pred[0], joint_ssl_target)
-            print("joint_ssl_done")
             ssl_pred = model(ssl_img, task="self_supervised")
             ssl_loss = F.cross_entropy(ssl_pred, ssl_target)
-            print(ssl_loss)
         
         # weighted losses
-        # weighted_losses = AWL(joint_sup_losses, joint_ssl_loss, ssl_loss)
+        weighted_losses = awl(joint_sup_losses, joint_ssl_loss, ssl_loss)
 
-        print("a fucking miracle has occured")
-
+        # scaler step analogous to optimiser
         scaler.scale(weighted_losses).backward()
-
         scaler.step(optimizer)
         scaler.update()
-        
-        #losses.backward()
-        #optimizer.step()
         optimizer.zero_grad()
-        
+      
         # reporting
-        loop_loss_acc += losses.item()
-        train_reporter(iter_count, device, losses.item(), epoch, "mrcnn")
+        loop_loss_acc += weighted_losses.item()
+        train_reporter(iter_count, device, weighted_losses.item(), epoch, "mrcnn")
+        
         iter_count += 1
-
         garbage_collector()
 
-    logger["train_loss"].append(loop_loss_acc/len(loader)) 
+    logger["train_loss"].append(loop_loss_acc/len(joint_loader)) 
 
 def multi_task_validation_loop(model, loader, optimizer, scaler, logger, device, iter_count, epoch):
     """ Detials """

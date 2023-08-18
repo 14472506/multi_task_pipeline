@@ -17,13 +17,13 @@ import torch
 # Local Imports
 from models import ModelBuilder
 from optimizer import OptimiserSelector, SchedulerSelector
+from optimizer import AutomaticWeightedLoss, get_awl_optimizer
 from datasets import DataloaderBuilder
 from .loop_selector import LoopSelector
 from pipeline_logging import LogBuilder
 from utils import (best_loss_saver, save_model, save_json, 
                    schedule_loader, load_model, garbage_collector)
 from utils.coco_evaluation import evaluate
-
 
 def setup_logging():
     """Setup logging configuration."""
@@ -59,6 +59,9 @@ class MainLoop:
     def _initialize_components(self):
         """Initialize the components (model, optimizer, datasets) based on the config."""
         self._initialize_model()
+        # if multi_task init AWL
+        if self.cfg["loop"]["type"] == "multi_task":
+            self._initialize_awl()
         self._initialize_optimizer_and_scheduler()
         self.logger = LogBuilder(self.logging_cfg).get_logger()
         self._initialize_data_loops()
@@ -70,7 +73,12 @@ class MainLoop:
 
     def _initialize_optimizer_and_scheduler(self):
         """Initialize optimizer and scheduler based on config."""
-        self.optimizer = OptimiserSelector(self.optimizer_cfg, self.model).get_optimizer()
+        if self.cfg["loop"]["type"] == "multi_task":
+            params_list = [{"params": self.model.parameters(), "lr": self.optimizer_cfg["params"]["lr"]}, {"params": self.awl.parameters()}]
+            self.optimizer = get_awl_optimizer(params_list)
+        else:
+            self.optimizer = OptimiserSelector(self.optimizer_cfg, self.model).get_optimizer()
+
         if "scheduler" in self.optimizer_cfg:
             self.scheduler = SchedulerSelector(self.optimizer_cfg, self.optimizer).get_scheduler()
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp)
@@ -87,6 +95,10 @@ class MainLoop:
             self.test_loader = DataloaderBuilder(self.cfg, "test").loader()
             self.test_loop = LoopSelector(self.cfg["loop"]).get_test()
 
+    def _initialize_awl(self):
+        self.awl = AutomaticWeightedLoss(num_losses=3)
+        self.awl.to(self.device)
+
     def train(self):
         """Main training loop."""
         try:
@@ -94,11 +106,11 @@ class MainLoop:
             
             for epoch in range(self.start, self.end):
                 self._train_epoch(epoch)
-                self._validate_epoch(epoch)
-                self._save_state(epoch)
+                #self._validate_epoch(epoch)
+                #self._save_state(epoch)
 
-                if self.scheduler:
-                    self._handle_scheduler_step(epoch)
+                #if self.scheduler:
+                #    self._handle_scheduler_step(epoch)
                 garbage_collector()
 
         except Exception as e:
@@ -110,14 +122,26 @@ class MainLoop:
         print(" [Epoch: %s]" %epoch)
         print("================================================================================")
         print(" --- Training ------------------------------------------------------------------")
-        self.iter_count = self.train_loop(self.model, 
-            self.train_loader,
-            self.optimizer,
-            self.scaler,
-            self.logger,
-            self.device,
-            self.iter_count,
-            epoch)
+        if self.cfg["loop"]["type"] == "multi_task":
+            self.iter_count = self.train_loop(self.model, 
+                self.train_loader,
+                self.optimizer,
+                self.scaler,
+                self.logger,
+                self.device,
+                self.iter_count,
+                epoch,
+                self.awl)
+        else:
+            self.iter_count = self.train_loop(self.model, 
+                self.train_loader,
+                self.optimizer,
+                self.scaler,
+                self.logger,
+                self.device,
+                self.iter_count,
+                epoch)
+
         garbage_collector()
 
     def _validate_epoch(self, epoch):

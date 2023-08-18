@@ -39,7 +39,6 @@ class OptimiserSelector():
         """Retrieve the optimizer based on the configuration."""
         optimizer_mapping = {
             'Adam': self._get_adam_optimizer
-            # Add other optimizers here as needed
         }
         
         opt_name = self.opt_name

@@ -348,3 +348,21 @@ ERROR:root:Error during training: Expected input batch_size (1) to match target 
 ERROR:root:Error during training: cross_entropy_loss(): argument 'target' (position 2) must be Tensor, not list
 ERROR:root:Error during training: 0D or 1D target tensor expected, multi-target not supported
 ERROR:root:Error during training: name 'weighted_losses' is not defined
+ERROR:root:Error during training: name 'weighted_losses' is not defined
+ERROR:root:Error during training: 'RotMaskRCNN_MultiTask' object is not subscriptable
+ERROR:root:Error during training: 'RotMaskRCNN_MultiTask' object is not subscriptable
+ERROR:root:Error during training: 'RotMaskRCNN_MultiTask' object is not subscriptable
+ERROR:root:Error during training: 'RotMaskRCNN_MultiTask' object is not subscriptable
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: local variable 'loop_loss_acc' referenced before assignment
+ERROR:root:Error during training: All bounding boxes should have positive height and width. Found invalid box [323.1312561035156, 0.0, 323.1312561035156, 0.0] for target at index 0.
+ERROR:root:Error during training: unsupported operand type(s) for %: 'NoneType' and 'int'
+ERROR:root:Error during training: unsupported operand type(s) for %: 'NoneType' and 'int'
