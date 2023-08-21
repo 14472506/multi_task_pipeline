@@ -56,7 +56,7 @@ def evaluate(model, data_loader, device, save_path, train_flag=False, test_flag=
     
     # carrying out evaluation over dataset
     #for images, targets, something, something_else in data_loader:
-    for images, targets in data_loader:
+    for images, targets, _, _ in data_loader:
         # as with training loop address this is in the collate function
 
         images = list(img.to(device) for img in images)

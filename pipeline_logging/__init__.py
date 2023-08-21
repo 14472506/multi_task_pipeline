@@ -1,2 +1,2 @@
 from .logging_builder import LogBuilder
-from .training_loop_reporter import train_reporter, val_reporter
+from .training_loop_reporter import train_reporter, val_reporter, train_reporter_multi_task, val_reporter_multi_task

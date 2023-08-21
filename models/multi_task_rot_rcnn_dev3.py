@@ -47,8 +47,10 @@ class RotMaskRCNN_MultiTask(nn.Module):
             x = self.fc_layers(x)
             x = self.rotnet_classifier(x)
             return x
-        elif task == "supervised":
-            x = self.Mask_RCNN(x, y)
-            return x
         else:
-            raise ValueError(f"Invalid task type: {task}")
+            if y == None:
+                x = self.Mask_RCNN(x)
+                return x
+            else:
+                x = self.Mask_RCNN(x, y)
+                return x

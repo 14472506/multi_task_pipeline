@@ -22,7 +22,7 @@ def validate_config(config):
             raise ValueError(f"Config missing section: {section}")
 
 def main(config_file):
-    logging.basicConfig(filename="pipeline.log", level=logging.INFO)
+    #logging.basicConfig(filename="pipeline.log", level=logging.INFO)
 
     # loading experiment
     try:
@@ -30,7 +30,7 @@ def main(config_file):
             cfg = json.load(f)
         validate_config(cfg)
     except Exception as e:
-        logging.error(f"Error loading config file: {str(e)}")
+        #logging.error(f"Error loading config file: {str(e)}")
         return
 
     cfg["logging"]["path"] = cfg["logging"]["path"] + "_1"

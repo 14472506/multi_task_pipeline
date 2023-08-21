@@ -43,7 +43,7 @@
             },
             "test":{
                 "dir": "test",
-                "json_dir": "test.json",
+                "json": "test.json",
                 "batch_size": 1,
                 "ssl_batch_size": 4,
                 "shuffle": false,
@@ -67,7 +67,7 @@
         }
     },
     "loop": {
-        "actions": ["train"],
+        "actions": ["test"],
         "epochs": {
             "start": 0,
             "end": 45

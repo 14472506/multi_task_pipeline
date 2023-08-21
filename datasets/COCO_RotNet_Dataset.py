@@ -44,6 +44,7 @@ class COCORotDataset(data.Dataset):
 
     def _initialize_params(self):
         """Detials"""
+        
         self.coco = COCO(os.path.join(
                 self.source,
                 self.params.get(self.type, "").get("dir", ""),

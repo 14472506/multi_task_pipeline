@@ -25,10 +25,9 @@ from utils import (best_loss_saver, save_model, save_json,
                    schedule_loader, load_model, garbage_collector)
 from utils.coco_evaluation import evaluate
 
-def setup_logging():
-    """Setup logging configuration."""
-    logging.basicConfig(filename="pipeline.log", level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+#def setup_logging():
+#    """Setup logging configuration."""
+#    logging.basicConfig(filename="pipeline.log", level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class MainLoop:
     def __init__(self, cfg, seed=42):
@@ -54,7 +53,7 @@ class MainLoop:
         self.path = self.logging_cfg.get("path", "./")
         self.start = self.cfg.get("loop", {}).get("epochs", {}).get("start", 0)
         self.end = self.cfg.get("loop", {}).get("epochs", {}).get("end", 0)
-        self.path_name = self.logging_cfg.get("checkpoint_name", "checkpoint")
+        self.path_name = self.logging_cfg.get("checkpoint_name", "checkpoint.pth") # FIX THIS IM LEAVING IT FOR NOT TO GET THIS WORKING. THEN FIX IT!
 
     def _initialize_components(self):
         """Initialize the components (model, optimizer, datasets) based on the config."""
@@ -101,20 +100,17 @@ class MainLoop:
 
     def train(self):
         """Main training loop."""
-        try:
-            save_json(self.cfg, self.path, "cfg.json")
-            
-            for epoch in range(self.start, self.end):
-                self._train_epoch(epoch)
-                #self._validate_epoch(epoch)
-                #self._save_state(epoch)
 
-                #if self.scheduler:
-                #    self._handle_scheduler_step(epoch)
-                garbage_collector()
+        save_json(self.cfg, self.path, "cfg.json")
+        
+        for epoch in range(self.start, self.end):
+            self._train_epoch(epoch)
+            self._validate_epoch(epoch)
+            self._save_state(epoch)
 
-        except Exception as e:
-            logging.error(f"Error during training: {str(e)}")
+            if self.scheduler:
+                self._handle_scheduler_step(epoch)
+            garbage_collector()
 
     def _train_epoch(self, epoch):
         self.logger["epochs"].append(epoch)
@@ -146,14 +142,25 @@ class MainLoop:
 
     def _validate_epoch(self, epoch):
         print(" --- Validation ----------------------------------------------------------------")
-        self.val_loop(self.model,
-            self.val_loader,                
-            self.scaler,
-            self.logger,
-            self.device,
-            epoch,
-            self.path
-            )
+        if self.cfg["loop"]["type"] == "multi_task":
+            self.val_loop(self.model,
+                self.val_loader,                
+                self.scaler,
+                self.logger,
+                self.device,
+                epoch,
+                self.path,
+                self.awl
+                )
+        else:
+            self.val_loop(self.model,
+                self.val_loader,                
+                self.scaler,
+                self.logger,
+                self.device,
+                epoch,
+                self.path
+                )
         garbage_collector()
 
     def _save_state(self, epoch):
@@ -207,15 +214,14 @@ class MainLoop:
     def _test_model(self, state="best"):
         """Helper method for testing model in a given state (best/pre-step)."""
         filename = self.path_name if state == "best" else "/ps_" + self.path_name
-        try:
-            load_model(self.path_name, self.path_name, self.model)
 
-            print("================================================================================")
-            print(f" Evaluating {state.capitalize()} Model")
-            print("================================================================================")
+        load_model(self.path, self.path_name, self.model)
 
-            self.test_loop(self.model, self.test_loader, self.device, self.path_name, train_flag=True)
-            garbage_collector()
+        print("================================================================================")
+        print(f" Evaluating {state.capitalize()} Model")
+        print("================================================================================")
+
+        self.test_loop(self.model, self.test_loader, self.device, self.path_name, train_flag=True)
+
+        garbage_collector()
         
-        except Exception as e:
-            logging.error(f"Error during testing: {str(e)}")
