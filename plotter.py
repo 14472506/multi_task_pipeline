@@ -4,8 +4,8 @@ from matplotlib import pyplot as plt
 from collections import OrderedDict
 
 results_list = []
-root = "outputs/multi_task_dev/"
-dirname = "test_5"
+root = "outputs/reduced_dataset_ssl/"
+dirname = "full_reduction_Jigsaw_pt_mask_rcnn_1"
 
 #for root, dir, files in os.walk(root):
 #for dirname in sorted(dir):
@@ -16,13 +16,13 @@ results_list.append((dirname, data))
  
 results_dicts = OrderedDict(results_list)
 
-val = results_dicts["test_5"]
+val = results_dicts["full_reduction_Jigsaw_pt_mask_rcnn_1"]
 
-figure = plt.figure(figsize=(3,3))
+figure = plt.figure(figsize=(10,5))
 rows = 1
 columns = 1
-h = 150
-w = 300
+h = 50
+w = 50
 count = 1
 #for key, val in results_dicts.items():
 #    
@@ -45,4 +45,4 @@ step_label = str(round(val["best_val"][-3], 3)) + " @ " + str(val["best_epoch"][
 plt.annotate(step_label, (val["best_epoch"][-3], val["best_val"][-3]))
 #
 figure.legend(loc="upper right")
-plt.show()
+plt.savefig('plot2.png')

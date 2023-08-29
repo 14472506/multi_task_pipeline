@@ -32,8 +32,7 @@ def main(config_file):
     except Exception as e:
         #logging.error(f"Error loading config file: {str(e)}")
         return
-
-    cfg["logging"]["path"] = cfg["logging"]["path"] + "_1"
+    
     loop = MainLoop(cfg)
     if "train" in cfg["loop"]["actions"]:
         loop.train()

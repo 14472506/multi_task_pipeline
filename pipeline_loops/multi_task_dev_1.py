@@ -22,11 +22,14 @@ def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, i
     loop_loss_acc = 0
 
     # adjusting larger loader to correct num of instances
-    if iter_count:
-        num_extra_fetches = iter_count % len(ssl_loader)
+    num_extra_fetches = iter_count % len(ssl_loader)
+    if num_extra_fetches:
+        print(num_extra_fetches)
         for i in range(num_extra_fetches):
             ssl_img, ssl_target = next(ssl_iter) 
 
+    accumulation_iter = 2
+        
     # loop over labelled dataset
     for i in range(len(joint_iter)):
         
@@ -37,7 +40,13 @@ def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, i
         joint_ssl_img = joint_ssl_img[0].to(device)
         joint_ssl_target = joint_ssl_target[0].to(device)
 
-        ssl_img, ssl_target = next(ssl_iter) 
+        # this seems lazy as fuck but if it works it works
+        try:
+            ssl_img, ssl_target = next(ssl_iter) 
+        except StopIteration:
+            print("resetting iter")
+            ssl_iter = iter(ssl_loader)
+            ssl_img, ssl_target = next(ssl_iter)         
         ssl_img = ssl_img.to(device)
         ssl_target = ssl_target.to(device)
 
@@ -55,9 +64,11 @@ def multi_task_training_loop(model, loader, optimizer, scaler, logger, device, i
         
         # scaler step analogous to optimiser
         scaler.scale(weighted_losses).backward()
-        scaler.step(optimizer)
-        scaler.update()
-        optimizer.zero_grad()
+
+        if (i+1) % accumulation_iter == 0:
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad()
       
         # reporting
         loop_loss_acc += weighted_losses.item()

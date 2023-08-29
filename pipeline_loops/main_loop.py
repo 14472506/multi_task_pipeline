@@ -53,7 +53,7 @@ class MainLoop:
         self.path = self.logging_cfg.get("path", "./")
         self.start = self.cfg.get("loop", {}).get("epochs", {}).get("start", 0)
         self.end = self.cfg.get("loop", {}).get("epochs", {}).get("end", 0)
-        self.path_name = self.logging_cfg.get("checkpoint_name", "checkpoint.pth") # FIX THIS IM LEAVING IT FOR NOT TO GET THIS WORKING. THEN FIX IT!
+        self.path_name = self.logging_cfg.get("pth_name", "checkpoint.pth") 
 
     def _initialize_components(self):
         """Initialize the components (model, optimizer, datasets) based on the config."""

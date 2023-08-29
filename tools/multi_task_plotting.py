@@ -19,8 +19,8 @@ results_dicts = OrderedDict(results_list)
 figure = plt.figure(figsize=(3,3))
 rows = 1
 columns = 1
-h = 50
-w = 150
+h = 480
+w = 640
 count = 1
 for key, val in results_dicts.items():
     
