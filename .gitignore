@@ -1,4 +1,5 @@
-sources/
+BASE/
+data_handling/sources/
 __pycache__/
 outputs/
 tools/label_generator_ouputs/
