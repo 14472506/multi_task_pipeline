@@ -18,6 +18,7 @@ from models import Models
 from data_handling import Loaders
 from losses import Losses
 from optimisers import Optimisers, Schedulers
+from .logs.logs import Logs
 from .actions.preloop import PreLoop
 from .actions.prestep import PreStep
 from .actions.step import Step
@@ -45,16 +46,31 @@ class Train():
     def train(self):
         """ detials """
         self._before_loop()
+        
         for epoch in range(self.start, self.end):
-            self._pre_step()
+            
+            self._pre_step(epoch)
+
             self._step(self.model,
                        self.train_loader,
                        self.val_loader,
                        self.loss, 
                        self.optimiser, 
                        self.device, 
-                       self.grad_acc)
-            self._post_step()
+                       self.grad_acc,
+                       epoch,
+                       self.logs,
+                       self.iter_count,
+                       self.logger
+                       )
+            
+            self._post_step(epoch, 
+                            self.model, 
+                            self.optimiser, 
+                            self.scheduler, 
+                            self.logs, 
+                            self.logger)
+            
         self._post_loop()
 
     def _extract_configs(self):
@@ -70,6 +86,7 @@ class Train():
         self.loader_cfg = self.cfg["dataset"]
         self.loss_cfg = self.cfg["losses"]
         self.optimiser_cfg = self.cfg["optimiser"]
+        self.logs_cfg = self.cfg["logs"]
 
     def _initialise_model(self):
         """ Detials """
@@ -89,10 +106,15 @@ class Train():
         self.optimiser = Optimisers(self.optimiser_cfg, self.model).optimiser()
         if self.optimiser_cfg["sched_name"]:
             self.scheduler = Schedulers(self.optimiser_cfg, self.optimiser).scheduler()
+        else:
+            self.scheduler = None
 
     def _initialise_logs(self):
         """ Detials """
-        pass
+        self.logger = Logs(self.logs_cfg)
+        self.iter = self.logger.get_iter()
+        self.logs = self.logger.get_log()
+        self.logger.init_log_file(self.cfg, self.logs)
 
     def _initialise_actions(self):
         """ Details """

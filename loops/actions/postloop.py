@@ -2,6 +2,9 @@
 Detials
 """
 # imports
+import torch
+import torch.nn.functional as F
+import gc
 
 # class
 class PostLoop():
@@ -19,4 +22,9 @@ class PostLoop():
 
     def _classifier_action(self):
         """ Detials """
-        pass
+        banner = "================================================================================"
+        title = " Training Complete"
+
+        print(banner)
+        print(title)
+        print(banner)

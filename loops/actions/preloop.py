@@ -19,4 +19,9 @@ class PreLoop():
     
     def _classifier_action(self):
         """ Detials """
-        pass
+        banner = "================================================================================"
+        title = " Classifier Training "
+
+        print(banner)
+        print(title)
+        print(banner)

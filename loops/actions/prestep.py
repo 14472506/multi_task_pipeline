@@ -17,6 +17,11 @@ class PreStep():
         }
         return self.action_map[self.model_name]
 
-    def _classifier_action(self):
+    def _classifier_action(self, epoch):
         """ Detials """
-        pass
+        banner = "--------------------------------------------------------------------------------"
+        title = "Epoch: " + str(epoch)
+
+        print(banner)
+        print(title)
+        print(banner)
