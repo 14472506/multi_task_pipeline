@@ -1,0 +1,80 @@
+meta data:
+  version: "1.0"
+  desctiption: "Base config file for training RotNet self supervised classifier model using a selected directory of images"
+
+loops:
+  device: "cuda:0"
+  grad_acc: [1, 1]
+  start: 0
+  end: 20
+
+logs:
+  model_name: rotmask_multi_task
+  logger_type: basic
+  print_freq: 20
+  iter_init: 0
+  best_init: .inf
+  step: 200
+  exp_dir: "dev" 
+  sub_dir: "dev_1"
+  last_title: last_model.pth
+  best_post_title: post_best.pth
+  best_pre_title: pre_best.path
+
+model:
+  model_name: rotmask_multi_task
+  params:
+    backbone_type: pre-trained
+    num_rotations: 4
+    drop_out: 0.2
+    batch_norm: false
+    trainable_layers: 5
+    num_classes: 2
+    hidden_layers: 256
+
+dataset:
+  source: [data_handling/sources/jersey_dataset_v4, data_handling/sources/All_RGB]
+  random_seed: 42
+  model_name: rotmask_multi_task
+  sub_mod_name: rotnet_resnet_50
+  col_fn: true
+  params:
+    split:
+      train_test: 0.8
+      train_val: 0.8
+    num_rotations: 4
+    train:
+      dir: train
+      json: train.json
+      batch_size: [1, 4]
+      shuffle: true
+      num_workers: 0
+      augmentations: true
+    val:
+      dir: val
+      json: val.json
+      batch_size: [1, 4]
+      shuffle: false
+      num_workers: 0
+      augmentations: false
+    test:
+      dir: test
+      json: test.json
+      batch_size: [1, 4]
+      shuffle: false
+      num_workers: 0
+      augmentations: false
+
+losses:
+  model_name: rotmask_multi_task
+  params: []
+
+optimiser:
+  model_name: rotmask_multi_task
+  opt_name: "Adam"
+  opt_params:
+    lr: 0.00005 
+  sched_name: "StepLR"
+  sched_params:
+    step: 5
+    gamma: 0.1

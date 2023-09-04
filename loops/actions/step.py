@@ -16,7 +16,8 @@ class Step():
     
     def action(self):
         self.action_map = {
-            "rotnet_resnet_50": self._classifier_action
+            "rotnet_resnet_50": self._classifier_action,
+            "rotmask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]
 
@@ -104,6 +105,186 @@ class Step():
 
         validate(model, val_loader, loss, device, epoch, log, logger)
     
+    def _multitask_action(self, model, train_loader, val_loader, loss, optimiser, device, grad_acc, epoch, log, iter_count, logger):
+        """ Detials """
+        def train(model, loader, loss_fun, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger):
+            """ Detials """
+            # loop execution setup
+            model.train()
+            pf_loss = 0
+            sup_loss_acc = 0
+            sup_ssl_loss_acc = 0
+            ssl_loss_acc = 0
+            weighted_losses_acc = 0
+            sup_grad_acc = 0
+            sup_ssl_grad_acc = 0
+            ssl_grad_acc = 0
 
+            # supervised and self supervised loader extraction
+            sup_iter = iter(loader[0])
+            ssl_iter = iter(loader[1])
+
+            # losses
+            awl = loss_fun[0]
+            loss = loss_fun[1]
+
+            # grad handler
+            if grad_acc:
+                primary_grad = grad_acc[0]
+                secondar_grad = grad_acc[1]
+            else:
+                primary_grad = 1
+                secondar_grad = 1
+
+            # ssl step adjust goes here
+
+            for i in range(len(loader[0])):
+                sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)
+                sup_im = list(image.to(device) for image in sup_im)
+                sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
+                sup_ssl_im = sup_ssl_im[0].to(device)
+                sup_ssl_target = sup_ssl_target[0].to(device)
+
+                with autocast():
+                    # forward pass
+                    sup_output = model.forward(sup_im, sup_target, action="supervised")
+                    sup_loss = sum(loss for loss in sup_output.values())
+                    sup_ssl_output = model.forward(sup_ssl_im, action="self_supervised")
+                    sup_ssl_loss = loss(sup_ssl_output[0], sup_ssl_target)
+
+                    #print(sup_loss, sup_ssl_loss)
+
+                    # accumulating grad losses
+                    sup_grad_acc += sup_loss
+                    sup_ssl_grad_acc += sup_ssl_loss
+
+                    for i in range(0, secondar_grad):
+                        # ADJUST THIS WHEN STEP ADJUST
+                        ssl_im, ssl_target = next(ssl_iter)
+                        ssl_im = ssl_im.to(device)
+                        ssl_target = ssl_target.to(device)
+
+                        del sup_im, sup_target, sup_ssl_im, sup_ssl_target
+                        torch.cuda.empty_cache()
+
+                        # forward pass
+                        ssl_output = model.forward(ssl_im, action="self_supervised")
+                        ssl_loss = loss(ssl_output, ssl_target)
+
+                        # accumulating grad losses
+                        ssl_grad_acc += ssl_loss
+                
+                    # normalise gradients
+                    norm_sup_grad = sup_grad_acc/primary_grad
+                    norm_sup_ssl_grad = sup_ssl_grad_acc/primary_grad
+                    norm_ssl_grad = ssl_grad_acc/secondar_grad
+
+                    #combining
+                    weighted_losses = awl(norm_sup_grad, norm_sup_ssl_grad, norm_ssl_grad)
+                
+                scaler.scale(weighted_losses).backward()
+                if (i+1) % primary_grad == 0:
+                    # optimiser step
+                    scaler.step(optimiser)
+                    scaler.update()
+                    optimiser.zero_grad()
+                                        
+                    # reset accumulators
+                    sup_grad_acc = 0
+                    sup_ssl_grad_acc = 0
+                    ssl_grad_acc = 0
+
+                sup_loss_acc += norm_sup_grad.item()
+                sup_ssl_loss_acc += norm_sup_ssl_grad.item()
+                ssl_loss_acc += norm_ssl_grad.item()
+                weighted_losses_acc += weighted_losses.item()
+                pf_loss += weighted_losses.item()
+
+                # reporting
+                pf_loss = logger.train_loop_reporter(epoch, iter_count, device, pf_loss)
+                iter_count += 1
+
+                torch.cuda.empty_cache()
+            
+            # logging
+            log["epochs"].append(epoch)
+            log["train_loss"].append(weighted_losses_acc/len(loader[0]))
+            log["train_sup_loss"].append(sup_loss_acc/len(loader[0]))
+            log["train_sup_ssl_loss"].append(sup_ssl_loss_acc/len(loader[0]))
+            log["train_ssl_loss"].append(ssl_loss_acc/len(loader[0]))
+
+        def validate(model, loader, loss_fun, device , epoch, log, logger):
+            """ Detials """
+            # loop execution setup
+            model.train()
+            sup_loss_acc = 0
+            sup_ssl_loss_acc = 0
+            ssl_loss_acc = 0
+            weighted_losses_acc = 0
+
+            # supervised and self supervised loader extraction
+            sup_iter = iter(loader[0])
+            ssl_iter = iter(loader[1])
+
+            # losses
+            awl = loss_fun[0]
+            loss = loss_fun[1]
+
+            # ssl step adjust goes here
+            for i in range(len(loader[0])):
+                sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)
+                sup_im = list(image.to(device) for image in sup_im)
+                sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
+                sup_ssl_im = sup_ssl_im[0].to(device)
+                sup_ssl_target = sup_ssl_target[0].to(device)
+                ssl_im, ssl_target = next(ssl_iter)
+                ssl_im = ssl_im.to(device)
+                ssl_target = ssl_target.to(device)
+
+                with torch.no_grad():
+                    with autocast():
+                        # forward pass
+                        sup_output = model.forward(sup_im, sup_target, action="supervised")
+                        sup_loss = sum(loss for loss in sup_output.values())
+                        sup_ssl_output = model.forward(sup_ssl_im, action="self_supervised")
+                        sup_ssl_loss = loss(sup_ssl_output[0], sup_ssl_target)
+                        ssl_output = model.forward(ssl_im, action="self_supervised")
+                        ssl_loss = loss(ssl_output, ssl_target)
+                
+                        weighted_losses = awl(sup_loss, sup_ssl_loss, ssl_loss)
+
+                # collecting losses
+                sup_loss_acc += sup_loss.item()
+                sup_ssl_loss_acc += sup_ssl_loss.item()
+                ssl_loss_acc += ssl_loss.item()
+                weighted_losses_acc += weighted_losses.item()
+            
+            # logging
+            log["epochs"].append(epoch)
+            log["val_loss"].append(weighted_losses_acc/len(loader[0]))
+            log["val_sup_loss"].append(sup_loss_acc/len(loader[0]))
+            log["val_sup_ssl_loss"].append(sup_ssl_loss_acc/len(loader[0]))
+            log["val_ssl_loss"].append(ssl_loss_acc/len(loader[0]))
+            logger.val_loop_reporter(epoch, device, log["val_sup_loss"][-1])
+
+        # initial params
+        banner = "--------------------------------------------------------------------------------"
+        train_title = "Training"
+        val_title = "Validating"
+
+        loss[0].to(device)
+        scaler = torch.cuda.amp.GradScaler(enabled=True)
+
+        print(banner)
+        print(train_title)
+        print(banner)
+
+        train(model, train_loader, loss, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger)
+
+        print(banner)
+        print(val_title)
+        print(banner)
+
+        validate(model, val_loader, loss, device, epoch, log, logger)
 
     

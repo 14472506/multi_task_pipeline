@@ -73,7 +73,8 @@ class Logs():
     def get_log(self):
         """ Detials """
         logs_mapper = {
-            "rotnet_resnet_50": self._class_logs
+            "rotnet_resnet_50": self._class_logs,
+            "rotmask_multi_task": self._multitask_logs
         }
         return logs_mapper[self.model_name]()
     
@@ -83,6 +84,25 @@ class Logs():
             logger = {
                 "train_loss": [],
                 "val_loss": [],
+                "epochs": [],
+                "pre_best_val": [],
+                "pre_best_epoch": [],
+                "post_best_val": [],
+                "post_best_epoch": []
+            }
+        return logger
+    
+    def _multitask_logs(self):
+        if self.logs_type == "basic":
+            logger = {
+                "train_loss": [],
+                "train_sup_loss": [],
+                "train_sup_ssl_loss": [],
+                "train_ssl_loss": [],               
+                "val_loss": [],
+                "val_sup_loss": [],
+                "val_sup_ssl_loss": [],
+                "val_ssl_loss": [],
                 "epochs": [],
                 "pre_best_val": [],
                 "pre_best_epoch": [],

@@ -3,6 +3,7 @@ Details
 """
 # imports
 from .classification.rotnet_classifier_model import RotNet
+from .multi_task.rotmask_multitask_model import RotMask_Multi_Task
 
 # class
 class Models():
@@ -16,7 +17,8 @@ class Models():
     def _initialise_mapping(self):
         """ Detials """
         self.model_mapping = {
-            "rotnet_resnet_50": RotNet
+            "rotnet_resnet_50": RotNet,
+            "rotmask_multi_task": RotMask_Multi_Task
         }
     
     def _exctract_cfg(self):

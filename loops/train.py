@@ -103,7 +103,7 @@ class Train():
 
     def _initialise_optimiser(self):
         """ Details """
-        self.optimiser = Optimisers(self.optimiser_cfg, self.model).optimiser()
+        self.optimiser = Optimisers(self.optimiser_cfg, self.model, self.loss).optimiser()
         if self.optimiser_cfg["sched_name"]:
             self.scheduler = Schedulers(self.optimiser_cfg, self.optimiser).scheduler()
         else:

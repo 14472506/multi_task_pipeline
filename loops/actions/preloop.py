@@ -13,7 +13,8 @@ class PreLoop():
     
     def action(self):
         self.action_map = {
-            "rotnet_resnet_50": self._classifier_action
+            "rotnet_resnet_50": self._classifier_action,
+            "rotmask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]
     
@@ -21,6 +22,15 @@ class PreLoop():
         """ Detials """
         banner = "================================================================================"
         title = " Classifier Training "
+
+        print(banner)
+        print(title)
+        print(banner)
+    
+    def _multitask_action(self):
+        """ Detials """
+        banner = "================================================================================"
+        title = " Multi Task Training "
 
         print(banner)
         print(title)

@@ -5,13 +5,13 @@ import os
 
 class Optimisers():
     """ Detials """
-    def __init__(self, cfg, model):
+    def __init__(self, cfg, model, loss):
         """ Detials """
         self.cfg = cfg
         self.model = model
+        self.loss = loss
         self._extract_config()
         self._get_model_params()
-
 
     def _extract_config(self):
         """ Detials """
@@ -34,6 +34,8 @@ class Optimisers():
         """ Detials """
         if self.model_name == "rotnet_resnet_50":
             self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}]
+        if self.model_name == "rotmask_multi_task":
+            self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}, {"params": self.loss[0].parameters()}]
         
 
 
