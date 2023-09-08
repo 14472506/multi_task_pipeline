@@ -111,14 +111,6 @@ class Step():
             """ Detials """
             # loop execution setup
             model.train()
-            pf_loss = 0
-            sup_loss_acc = 0
-            sup_ssl_loss_acc = 0
-            ssl_loss_acc = 0
-            weighted_losses_acc = 0
-            sup_grad_acc = 0
-            sup_ssl_grad_acc = 0
-            ssl_grad_acc = 0
 
             # supervised and self supervised loader extraction
             sup_iter = iter(loader[0])
@@ -128,13 +120,10 @@ class Step():
             awl = loss_fun[0]
             loss = loss_fun[1]
 
-            # grad handler
-            if grad_acc:
-                primary_grad = grad_acc[0]
-                secondar_grad = grad_acc[1]
-            else:
-                primary_grad = 1
-                secondar_grad = 1
+            primary_grad = grad_acc[0] if grad_acc else 1
+            secondar_grad = grad_acc[1] if grad_acc else 1
+
+            sup_loss_acc, sup_ssl_loss_acc, ssl_loss_acc, weighted_losses_acc, pf_loss = 0, 0, 0, 0, 0
 
             # ssl step adjust goes here
 
@@ -152,35 +141,30 @@ class Step():
                     sup_ssl_output = model.forward(sup_ssl_im, action="self_supervised")
                     sup_ssl_loss = loss(sup_ssl_output[0], sup_ssl_target)
 
-                    #print(sup_loss, sup_ssl_loss)
+                    #sup_loss /= primary_grad
+                    #sup_ssl_loss /= primary_grad
 
-                    # accumulating grad losses
-                    sup_grad_acc += sup_loss
-                    sup_ssl_grad_acc += sup_ssl_loss
-
+                    sup_loss_acc += sup_loss.item()
+                    sup_ssl_loss_acc += sup_ssl_loss.item()
+                    
                     for i in range(0, secondar_grad):
                         # ADJUST THIS WHEN STEP ADJUST
                         ssl_im, ssl_target = next(ssl_iter)
                         ssl_im = ssl_im.to(device)
                         ssl_target = ssl_target.to(device)
 
-                        del sup_im, sup_target, sup_ssl_im, sup_ssl_target
-                        torch.cuda.empty_cache()
-
                         # forward pass
                         ssl_output = model.forward(ssl_im, action="self_supervised")
                         ssl_loss = loss(ssl_output, ssl_target)
 
-                        # accumulating grad losses
-                        ssl_grad_acc += ssl_loss
-                
-                    # normalise gradients
-                    norm_sup_grad = sup_grad_acc/primary_grad
-                    norm_sup_ssl_grad = sup_ssl_grad_acc/primary_grad
-                    norm_ssl_grad = ssl_grad_acc/secondar_grad
-
-                    #combining
-                    weighted_losses = awl(norm_sup_grad, norm_sup_ssl_grad, norm_ssl_grad)
+                        #ssl_loss /= secondar_grad
+                        print(ssl_loss.item())
+                    ssl_loss_acc += ssl_loss.item()
+                    
+                    print(sup_loss.item(), sup_ssl_loss.item(), ssl_loss.item())
+                    weighted_losses = awl(sup_loss, sup_ssl_loss, ssl_loss)
+                    weighted_losses_acc += weighted_losses.item()
+                    pf_loss += weighted_losses.item()
                 
                 scaler.scale(weighted_losses).backward()
                 if (i+1) % primary_grad == 0:
@@ -188,23 +172,10 @@ class Step():
                     scaler.step(optimiser)
                     scaler.update()
                     optimiser.zero_grad()
-                                        
-                    # reset accumulators
-                    sup_grad_acc = 0
-                    sup_ssl_grad_acc = 0
-                    ssl_grad_acc = 0
-
-                sup_loss_acc += norm_sup_grad.item()
-                sup_ssl_loss_acc += norm_sup_ssl_grad.item()
-                ssl_loss_acc += norm_ssl_grad.item()
-                weighted_losses_acc += weighted_losses.item()
-                pf_loss += weighted_losses.item()
-
+                                    
                 # reporting
                 pf_loss = logger.train_loop_reporter(epoch, iter_count, device, pf_loss)
                 iter_count += 1
-
-                torch.cuda.empty_cache()
             
             # logging
             log["epochs"].append(epoch)
@@ -286,5 +257,3 @@ class Step():
         print(banner)
 
         validate(model, val_loader, loss, device, epoch, log, logger)
-
-    
