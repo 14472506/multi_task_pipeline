@@ -126,7 +126,12 @@ class Step():
             sup_loss_acc, sup_ssl_loss_acc, ssl_loss_acc, weighted_losses_acc, pf_loss = 0, 0, 0, 0, 0
 
             # ssl step adjust goes here
-
+            ssl_adjust = log["iter_accume"] % len(loader[1])
+            if ssl_adjust:
+                print("Adjusting by %s steps" %(ssl_adjust))
+                for i in range(ssl_adjust):
+                    _, _ = next(ssl_iter)
+                
             for i in range(len(loader[0])):
                 sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)
                 sup_im = list(image.to(device) for image in sup_im)
@@ -148,8 +153,12 @@ class Step():
                     sup_ssl_loss_acc += sup_ssl_loss.item()
                     
                     for i in range(0, secondar_grad):
-                        # ADJUST THIS WHEN STEP ADJUST
-                        ssl_im, ssl_target = next(ssl_iter)
+                        try:
+                            ssl_im, ssl_target = next(ssl_iter) 
+                        except StopIteration:
+                            print("resetting iter")
+                            ssl_iter = iter(loader[1])
+                            ssl_im, ssl_target = next(ssl_iter)
                         ssl_im = ssl_im.to(device)
                         ssl_target = ssl_target.to(device)
 
@@ -157,11 +166,9 @@ class Step():
                         ssl_output = model.forward(ssl_im, action="self_supervised")
                         ssl_loss = loss(ssl_output, ssl_target)
 
-                        #ssl_loss /= secondar_grad
-                        print(ssl_loss.item())
+                        ssl_loss /= secondar_grad
+
                     ssl_loss_acc += ssl_loss.item()
-                    
-                    print(sup_loss.item(), sup_ssl_loss.item(), ssl_loss.item())
                     weighted_losses = awl(sup_loss, sup_ssl_loss, ssl_loss)
                     weighted_losses_acc += weighted_losses.item()
                     pf_loss += weighted_losses.item()
@@ -176,7 +183,10 @@ class Step():
                 # reporting
                 pf_loss = logger.train_loop_reporter(epoch, iter_count, device, pf_loss)
                 iter_count += 1
-            
+
+            # accumulating iter count for ssl iter adjust
+            log["iter_accume"] += iter_count*secondar_grad
+
             # logging
             log["epochs"].append(epoch)
             log["train_loss"].append(weighted_losses_acc/len(loader[0]))
@@ -202,13 +212,26 @@ class Step():
             loss = loss_fun[1]
 
             # ssl step adjust goes here
+            ssl_adjust = log["val_it_accume"] % len(loader[1])
+            if ssl_adjust:
+                print("Adjusting by %s steps" %(ssl_adjust))
+                for i in range(ssl_adjust):
+                    _, _ = next(ssl_iter)
+
+            # ssl step adjust goes here
             for i in range(len(loader[0])):
                 sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)
                 sup_im = list(image.to(device) for image in sup_im)
                 sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
                 sup_ssl_im = sup_ssl_im[0].to(device)
                 sup_ssl_target = sup_ssl_target[0].to(device)
-                ssl_im, ssl_target = next(ssl_iter)
+
+                try:
+                    ssl_im, ssl_target = next(ssl_iter) 
+                except StopIteration:
+                    print("resetting iter")
+                    ssl_iter = iter(loader[1])
+                    ssl_im, ssl_target = next(ssl_iter)  
                 ssl_im = ssl_im.to(device)
                 ssl_target = ssl_target.to(device)
 
@@ -230,12 +253,15 @@ class Step():
                 ssl_loss_acc += ssl_loss.item()
                 weighted_losses_acc += weighted_losses.item()
             
+            # adjusting val iter accumulation for ssl step adjust
+            log["val_it_accume"] += len(loader[0])
+
             # logging
-            log["epochs"].append(epoch)
             log["val_loss"].append(weighted_losses_acc/len(loader[0]))
             log["val_sup_loss"].append(sup_loss_acc/len(loader[0]))
             log["val_sup_ssl_loss"].append(sup_ssl_loss_acc/len(loader[0]))
             log["val_ssl_loss"].append(ssl_loss_acc/len(loader[0]))
+            
             logger.val_loop_reporter(epoch, device, log["val_sup_loss"][-1])
 
         # initial params

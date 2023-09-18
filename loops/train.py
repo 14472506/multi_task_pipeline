@@ -1,17 +1,15 @@
 """
-MainLoop for Training & Testing Models
-
-The script acts as a high-level pipeline manager, encapsulating the whole process of training
-the model based on the configuration provided. It loads the configuration, sets up the model, 
-optimizer, scheduler, datasets, and logs, and then handles the training, validation, and testing loops.
-
-Last Edited by: Bradley Hurst
+Module Detials:
+This module is a high level implementations of the training process for
+deep learning models. The train class which is imported by the main file
+uses the provided config dictionary to initialise the other modules used 
+for training. To execute model training the train method is called from 
+the main file.
 """
 # imports
 # base packages
 
 # third party packages
-import torch
 
 # local packages
 from models import Models
@@ -28,7 +26,7 @@ from .actions.postloop import PostLoop
 # class
 class Train():
     def __init__(self, cfg):
-        """Initialize the main loop with given config and seed."""
+        """Initialize the main loop with given config."""
         self.cfg = cfg
         self.iter_count = 0
 
@@ -44,7 +42,7 @@ class Train():
         self._initialise_logs()
 
     def train(self):
-        """ detials """
+        """ Executes the main training loop based off the config dictionary """
         self._before_loop()
         
         for epoch in range(self.start, self.end):
@@ -75,34 +73,48 @@ class Train():
 
     def _extract_configs(self):
         """ Extract all required parameters from config """
-        # loop parameters
-        self.device = self.cfg["loops"]["device"]
-        self.grad_acc = self.cfg["loops"]["grad_acc"]
-        self.start = self.cfg["loops"]["start"]
-        self.end = self.cfg["loops"]["end"]
+        try:    
+            # loop parameters
+            self.device = self.cfg["loops"]["device"]
+            self.grad_acc = self.cfg["loops"]["grad_acc"]
+            self.start = self.cfg["loops"]["start"]
+            self.end = self.cfg["loops"]["end"]
 
-        # sub configs
-        self.model_cfg = self.cfg["model"]
-        self.loader_cfg = self.cfg["dataset"]
-        self.loss_cfg = self.cfg["losses"]
-        self.optimiser_cfg = self.cfg["optimiser"]
-        self.logs_cfg = self.cfg["logs"]
+            # sub configs
+            self.model_cfg = self.cfg["model"]
+            self.loader_cfg = self.cfg["dataset"]
+            self.loss_cfg = self.cfg["losses"]
+            self.optimiser_cfg = self.cfg["optimiser"]
+            self.logs_cfg = self.cfg["logs"]
+        except KeyError as e:
+            raise KeyError(f"Missing necessary key in configuration: {e}")
 
     def _initialise_model(self):
-        """ Detials """
+        """
+        Initialises the model based off the provided confign
+        ensuring the model is sent to the specified device for
+        training
+        """
         self.model = Models(self.model_cfg).model()
         self.model.to(self.device)
 
     def _initialise_dataloader(self):
-        """ Detials """
+        """ 
+        Initialises the required train and valudation data loaders based
+        of the config dictionary 
+        """
         self.train_loader, self.val_loader = Loaders(self.loader_cfg, "train").loader()
 
     def _initialise_losses(self):
-        """ Detials """
+        """ Initialises the required loss based of the config dictionary """
         self.loss = Losses(self.loss_cfg).loss()
 
     def _initialise_optimiser(self):
-        """ Details """
+        """
+        Initialises the required optimiser specified in the condig in all
+        cases. In addition if a scheduler is specified in the config it is
+        initialised here. Otherwise, the sheduler attibute is set to None
+        """
         self.optimiser = Optimisers(self.optimiser_cfg, self.model, self.loss).optimiser()
         if self.optimiser_cfg["sched_name"]:
             self.scheduler = Schedulers(self.optimiser_cfg, self.optimiser).scheduler()
@@ -110,36 +122,20 @@ class Train():
             self.scheduler = None
 
     def _initialise_logs(self):
-        """ Detials """
+        """ 
+        Initialises the logging for the training loop, in addition to assiging 
+        specific attributes to the train loop class for passing between steps
+        in the training process.  
+        """
         self.logger = Logs(self.logs_cfg)
         self.iter = self.logger.get_iter()
         self.logs = self.logger.get_log()
         self.logger.init_log_file(self.cfg, self.logs)
 
     def _initialise_actions(self):
-        """ Details """
+        """ Initialises the key steps in the training process based of the config """
         self._before_loop = PreLoop(self.model_cfg).action()
         self._pre_step = PreStep(self.model_cfg).action()
         self._step = Step(self.model_cfg).action()
         self._post_step = PostStep(self.model_cfg).action()
         self._post_loop = PostLoop(self.model_cfg).action()
-        
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-

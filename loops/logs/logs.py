@@ -107,7 +107,9 @@ class Logs():
                 "pre_best_val": [],
                 "pre_best_epoch": [],
                 "post_best_val": [],
-                "post_best_epoch": []
+                "post_best_epoch": [],
+                "iter_accume": 0,
+                "val_it_accume": 0
             }
         return logger
     

@@ -1,44 +1,52 @@
 """
-Detials
+Module Detials:
+The losses class returns the loss from based on the provided config. 
+the module also contains the AutomaticWeightedLoss class for use in
+multi loss learning applications.
 """
 # import
+# import base packages
+
+# import third party packages
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
+# import local packages
+
 # class
 class Losses():
-    """ Detials """
     def __init__(self, cfg):
-        """ Detials """
+        """ Initialises the Losses class """
         self.cfg = cfg
         self.model_type = self.cfg["model_name"]
     
     def loss(self):
+        """ returns the selected loss when called """
         if self.model_type == "rotnet_resnet_50": 
             return self._classifier_loss,
         if self.model_type == "rotmask_multi_task": 
             return [self._AWL(), self._classifier_loss]
 
     def _classifier_loss(self, target, pred):
-        """ Detials """
+        """ returns the loss for implemented classifier based tasks """
         loss = F.cross_entropy(target, pred)
         return loss
     
     def _AWL(self):
-        """ Detials """
+        """ returns the automaticaly weighted loss """
         loss = AutomaticWeightedLoss()
         return loss
 
 class AutomaticWeightedLoss(nn.Module):
-    """ Detials """
     def __init__(self, num_losses=3):
+        """ initialises the automatically weighted loss class """
         super().__init__()
         params = torch.ones(num_losses, requires_grad=True)
         self.params = torch.nn.Parameter(params)
     
     def forward(self, *x):
-        """ Detials """
+        """ defines the forward pass for the learnable AWL parameters """
         losses_sum = 0
         for i, loss in enumerate(x):
             losses_sum += 0.5/(self.params[i]**2) * loss + torch.log(1+self.params[i]**2)

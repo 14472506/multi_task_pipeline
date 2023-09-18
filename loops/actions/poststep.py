@@ -44,7 +44,7 @@ class PostStep():
         """ Detials """
         logger.save_model(epoch, model, optimiser, "last")
 
-        if logs["val_loss"][-1] <= logger.best:
+        if logs["val_sup_loss"][-1] <= logger.best:
             if self.stepped:
                 logs["post_best_val"].append(logs["val_sup_loss"][-1])
                 logs["post_best_epoch"].append(epoch)

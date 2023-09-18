@@ -1,20 +1,28 @@
 """
-Detials
+Module Detials:
+The loader class in this method is called by the train and test modules. 
+The loader class uses the provided config to load the required dataset and
+produce a data loader for either train, validation, or test, based on the
+specified type.
 """
 # imports
+# import base packages
+import random
+
+# import third party packages
+import torch
+import numpy as np
+
+# import local packages
 from .datasets.rotnet import RotNetDataset
 from .datasets.coco_rotnet import COCORotDataset, COCO_collate_function
 from .transforms.transforms import Transforms
 from .transforms.transform_wrapper import wrappers
-import torch
-import numpy as np 
-import random
 
 # class
 class Loaders():
-    """ Detials """
     def __init__(self, cfg, type=None):
-        """ Detials """
+        """ Initialises the Loader class using the provided config """
         self.cfg = cfg
         self.type = type
         self._extract_config()
@@ -23,28 +31,30 @@ class Loaders():
     """ =========== supporting init methods ========== """
 
     def _extract_config(self):
-        """ Detials """
-        self.model_type = self.cfg["model_name"]
-        self.random_seed = self.cfg["random_seed"]
-        self.col_fn = self.cfg["col_fn"]
-
-        if self.type == "train":
-            self.train_bs = self.cfg["params"]["train"]["batch_size"]
-            self.val_bs = self.cfg["params"]["val"]["batch_size"]
-            self.train_shuffle = self.cfg["params"]["train"]["shuffle"]
-            self.val_shuffle = self.cfg["params"]["val"]["shuffle"]
-            self.train_workers = self.cfg["params"]["train"]["num_workers"]
-            self.val_workers = self.cfg["params"]["val"]["num_workers"]
-            self.train_augs = self.cfg["params"]["train"]["augmentations"]
-            self.val_augs = self.cfg["params"]["val"]["augmentations"]
-        else:
-            self.test_bs = self.cfg["params"]["test"]["batch_size"]
-            self.test_shuffle = self.cfg["params"]["test"]["shuffle"]
-            self.test_workers = self.cfg["params"]["test"]["num_workers"]
-            self.test_augs = self.cfg["params"]["test"]["augmentations"]
+        """ Extract the attributes from the provided config """
+        try:            
+            self.model_type = self.cfg["model_name"]
+            self.random_seed = self.cfg["random_seed"]
+            self.col_fn = self.cfg["col_fn"]
+            if self.type == "train":
+                self.train_bs = self.cfg["params"]["train"]["batch_size"]
+                self.val_bs = self.cfg["params"]["val"]["batch_size"]
+                self.train_shuffle = self.cfg["params"]["train"]["shuffle"]
+                self.val_shuffle = self.cfg["params"]["val"]["shuffle"]
+                self.train_workers = self.cfg["params"]["train"]["num_workers"]
+                self.val_workers = self.cfg["params"]["val"]["num_workers"]
+                self.train_augs = self.cfg["params"]["train"]["augmentations"]
+                self.val_augs = self.cfg["params"]["val"]["augmentations"]
+            else:
+                self.test_bs = self.cfg["params"]["test"]["batch_size"]
+                self.test_shuffle = self.cfg["params"]["test"]["shuffle"]
+                self.test_workers = self.cfg["params"]["test"]["num_workers"]
+                self.test_augs = self.cfg["params"]["test"]["augmentations"]
+        except KeyError as e:
+            raise KeyError(f"Missing necessary key in configuration: {e}")
 
     def _get_dataset_class(self):
-        """ Details """
+        """ retirieve the dataloader based on the model type """
         dataset_selector = {
             "rotnet_resnet_50": RotNetDataset,
             "rotmask_multi_task": [COCORotDataset, RotNetDataset],
@@ -54,7 +64,7 @@ class Loaders():
     """ =========== loader Method ========== """
 
     def loader(self):
-        """ Detials """
+        """ Return the data loader based on the config """
         loader_selector = {
             "rotnet_resnet_50": self._classifier_loader,
             "rotmask_multi_task": self._multitask_loader
@@ -111,7 +121,7 @@ class Loaders():
             return train_loader, val_loader
         
     def _multitask_loader(self):
-        """ Detials """
+        """ creates a dataloader for the multi task instance segmentation and classifier based models """
         self.train_test_split = self.cfg["params"]["split"]["train_test"]
         self.train_val_split = self.cfg["params"]["split"]["train_val"]
         sub_model_type = self.cfg["sub_mod_name"]
@@ -181,7 +191,7 @@ class Loaders():
     """ =========== Supporting Methods ========== """
 
     def _data_split(self, dataset):
-        """ Detials """
+        """ Splits the data of whole datasets based on a specified config split """
         # splitting data into train and test
         train_base_size = int(len(dataset)*self.train_test_split)
         test_size = len(dataset) - train_base_size
@@ -197,7 +207,7 @@ class Loaders():
             return [test]
 
     def _init_fn_worker(self, seed):
-        """ Initializes random seeds for workers """
+        """ ensures the seeds are in the worker init """
         np.random.seed(seed)
         random.seed(seed)
 
