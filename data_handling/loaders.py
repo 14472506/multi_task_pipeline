@@ -15,6 +15,7 @@ import numpy as np
 
 # import local packages
 from .datasets.rotnet import RotNetDataset
+from .datasets.coco import COCODataset
 from .datasets.coco_rotnet import COCORotDataset, COCO_collate_function
 from .transforms.transforms import Transforms
 from .transforms.transform_wrapper import wrappers
@@ -57,6 +58,7 @@ class Loaders():
         """ retirieve the dataloader based on the model type """
         dataset_selector = {
             "rotnet_resnet_50": RotNetDataset,
+            "mask_rcnn": COCODataset,
             "rotmask_multi_task": [COCORotDataset, RotNetDataset],
         }
         self.dataset_class = dataset_selector[self.model_type]
@@ -119,6 +121,46 @@ class Loaders():
             train_loader = self._create_dataloader(train_dataset, self.train_bs, self.train_shuffle, self.train_workers, self.col_fn)
             val_loader = self._create_dataloader(val_dataset, self.val_bs, self.val_shuffle, self.val_workers, self.col_fn)
             return train_loader, val_loader
+        
+    def _instance_loader(self):
+        """ creates a dataloader for the multi task instance segmentation and classifier based models """
+
+        if self.type == "test":
+
+            test_dataset = self.dataset_class(self.cfg, "test")
+
+            if self.test_augs:
+                transforms = Transforms(self.cfg).transforms()
+                transforms_wrapper = wrappers(self.model_type)
+                test_dataset = transforms_wrapper(test_dataset, transforms)
+                print("test augs applied")
+            
+            test_loader = self._create_dataloader(test_dataset, self.test_bs, self.test_shuffle, self.test_workers, COCO_collate_function)
+            return test_loader
+        
+        if self.type == "train":
+
+            train_dataset = self.dataset_class(self.cfg, "train")
+            val_dataset = self.dataset_class(self.cfg, "val")
+
+            if self.train_augs:
+                train_transforms = Transforms(self.cfg).transforms()
+                train_transforms_wrapper = wrappers(self.model_type)
+                train_dataset = train_transforms_wrapper(train_dataset, train_transforms)
+
+                print("train augs applied")
+
+            if self.val_augs:
+                val_transforms = Transforms(self.cfg).transforms()
+                val_transforms_wrapper = wrappers(self.model_type)
+                val_dataset = val_transforms_wrapper(val_dataset, val_transforms)
+                print("train augs applied")
+
+            train_loader = self._create_dataloader(train_dataset, self.train_bs, self.train_shuffle, self.train_workers, COCO_collate_function)           
+            val_loader = self._create_dataloader(val_dataset, self.val_bs, self.val_shuffle, self.val_workers, COCO_collate_function)
+          
+            
+            return train_loader, val_loader 
         
     def _multitask_loader(self):
         """ creates a dataloader for the multi task instance segmentation and classifier based models """

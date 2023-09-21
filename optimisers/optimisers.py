@@ -48,6 +48,8 @@ class Optimisers():
         """ returns the optimiser paramaters based on the selected model """
         if self.model_name == "rotnet_resnet_50":
             self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}]
+        if self.model_name == "mask_rcnn":
+            self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}]
         if self.model_name == "rotmask_multi_task":
             self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}, {"params": self.loss[0].parameters()}]
         

@@ -24,13 +24,20 @@ class Losses():
     def loss(self):
         """ returns the selected loss when called """
         if self.model_type == "rotnet_resnet_50": 
-            return self._classifier_loss,
+            return self._classifier_loss
         if self.model_type == "rotmask_multi_task": 
             return [self._AWL(), self._classifier_loss]
+        if self.model_type == "mask_rcnn":
+            return self._instance_seg_loss
 
     def _classifier_loss(self, target, pred):
         """ returns the loss for implemented classifier based tasks """
         loss = F.cross_entropy(target, pred)
+        return loss
+    
+    def _instance_seg_loss(self):
+        """ returns null for now """
+        loss = None
         return loss
     
     def _AWL(self):

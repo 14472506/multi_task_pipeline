@@ -14,11 +14,12 @@ class PreLoop():
     def action(self):
         self.action_map = {
             "rotnet_resnet_50": self._classifier_action,
+            "mask_rcnn": self._instance_seg_action,
             "rotmask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]
     
-    def _classifier_action(self):
+    def _classifier_action(self, model, cfg):
         """ Detials """
         banner = "================================================================================"
         title = " Classifier Training "
@@ -26,8 +27,19 @@ class PreLoop():
         print(banner)
         print(title)
         print(banner)
+
+    def _instance_seg_action(self, model, cfg):
+        """ Details """
+        banner = "================================================================================"
+        title = " Classifier Training "
+
+        # Load model weights here.
+
+        print(banner)
+        print(title)
+        print(banner)
     
-    def _multitask_action(self):
+    def _multitask_action(self, model, cfg):
         """ Detials """
         banner = "================================================================================"
         title = " Multi Task Training "

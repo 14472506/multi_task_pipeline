@@ -13,6 +13,8 @@ when the model attribute is called
 # local packages
 from .classification.rotnet_classifier_model import RotNet
 from .multi_task.rotmask_multitask_model import RotMask_Multi_Task
+from .multi_task.rotmask_model_dev import rotmask_resnet50_fpn
+from .instance_segmentation.mask_rcnn_model import maskrcnn_resnet50_fpn
 
 # class
 class Models():
@@ -26,7 +28,9 @@ class Models():
         """ Initialize the Models class with the configuration dictionary """
         self.model_mapping = {
             "rotnet_resnet_50": RotNet,
-            "rotmask_multi_task": RotMask_Multi_Task
+            "mask_rcnn":maskrcnn_resnet50_fpn,
+            #"rotmask_multi_task": RotMask_Multi_Task,
+            "rotmask_multi_task": rotmask_resnet50_fpn
         }
     
     def _exctract_cfg(self):

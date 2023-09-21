@@ -3,14 +3,13 @@ meta_data:
   description: "Base config file for training RotNet self supervised classifier model using a selected directory of images"
 
 defaults: 
-  model_name: &model_name rotmask_multi_task
+  model_name: &model_name mask_rcnn
   step: &step 50
-  num_rotations: &num_rotations 4
   seed: &seed 42
 
 loops:
   device: "cuda:0"
-  grad_acc: [1, 16]
+  grad_acc: 1
   start: 0
   end: 80
   seed: *seed
@@ -22,7 +21,7 @@ logs:
   iter_init: 0
   best_init: .inf
   step: *step
-  exp_dir: "rotmask_full_test" 
+  exp_dir: "mask_rcnn_dev" 
   sub_dir: "dev_1"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -32,42 +31,34 @@ model:
   model_name: *model_name
   params:
     backbone_type: pre-trained
-    num_rotations: *num_rotations
-    drop_out: 0.5
-    batch_norm: false
     trainable_layers: 5
     num_classes: 2
     hidden_layers: 256
 
 dataset:
-  source: [data_handling/sources/jersey_dataset_v4, data_handling/sources/All_RGB]
+  source: data_handling/sources/jersey_dataset_v4
   random_seed: *seed
   model_name: *model_name
-  sub_mod_name: rotnet_resnet_50
   col_fn: true
   params:
-    split:
-      train_test: 0.8
-      train_val: 0.8
-    num_rotations: *num_rotations
     train:
       dir: train
       json: train.json
-      batch_size: [1, 1]
+      batch_size: 1
       shuffle: true
       num_workers: 0
       augmentations: true
     val:
       dir: val
       json: val.json
-      batch_size: [1, 1]
+      batch_size: 1
       shuffle: false
       num_workers: 0
       augmentations: false
     test:
       dir: test
       json: test.json
-      batch_size: [1, 1]
+      batch_size: 1
       shuffle: false
       num_workers: 0
       augmentations: false

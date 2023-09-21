@@ -17,6 +17,7 @@ class PostLoop():
     def action(self):
         self.action_map = {
             "rotnet_resnet_50": self._classifier_action,
+            "mask_rcnn": self._instance_seg_action,
             "rotmask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]
@@ -38,3 +39,13 @@ class PostLoop():
         print(banner)
         print(title)
         print(banner)
+
+    def _instance_seg_action(self):
+        """ Detials """
+        banner = "================================================================================"
+        title = " Training Complete"
+
+        print(banner)
+        print(title)
+        print(banner)
+

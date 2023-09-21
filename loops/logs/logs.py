@@ -92,6 +92,19 @@ class Logs():
             }
         return logger
     
+    def _instance_seg_logs(self):
+        if self.logs_type == "basic":
+            logger = {
+                "train_loss": [],
+                "val_loss": [],
+                "epochs": [],
+                "pre_best_val": [],
+                "pre_best_epoch": [],
+                "post_best_val": [],
+                "post_best_epoch": []
+            }
+        return logger
+    
     def _multitask_logs(self):
         if self.logs_type == "basic":
             logger = {

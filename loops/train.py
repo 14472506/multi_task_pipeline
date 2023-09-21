@@ -8,8 +8,11 @@ the main file.
 """
 # imports
 # base packages
+import random
 
 # third party packages
+import torch
+import numpy as np
 
 # local packages
 from models import Models
@@ -28,6 +31,11 @@ class Train():
     def __init__(self, cfg):
         """Initialize the main loop with given config."""
         self.cfg = cfg
+        self.seed = self.cfg["loops"]["seed"]
+
+        # set deterministic
+        self._init_deterministic_settings()
+
         self.iter_count = 0
 
         # collect config data
@@ -41,9 +49,11 @@ class Train():
         self._initialise_actions()        
         self._initialise_logs()
 
+        print(self.model)
+
     def train(self):
         """ Executes the main training loop based off the config dictionary """
-        self._before_loop()
+        self._before_loop(self.model, self.cfg)
         
         for epoch in range(self.start, self.end):
             
@@ -139,3 +149,21 @@ class Train():
         self._step = Step(self.model_cfg).action()
         self._post_step = PostStep(self.model_cfg).action()
         self._post_loop = PostLoop(self.model_cfg).action()
+    
+    def _init_deterministic_settings(self):
+        """ 
+        Initialises the parameters in the training loop to ensure training is
+        as deterministic as possible. This areas still needs work as some non
+        deterministic algorithms may be able to be made deterministic
+        """
+        # torch settings
+        torch.manual_seed(self.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        #torch.use_deterministic_algorithms(True, warn_only=True)
+
+        # random settings
+        random.seed(self.seed)
+
+        # numpy settings
+        np.random.seed(self.seed)

@@ -17,6 +17,7 @@ class Step():
     def action(self):
         self.action_map = {
             "rotnet_resnet_50": self._classifier_action,
+            "mask_rcnn": self._instance_seg_action,
             "rotmask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]
@@ -104,6 +105,94 @@ class Step():
         print(banner)
 
         validate(model, val_loader, loss, device, epoch, log, logger)
+
+    def _instance_seg_action(self, model, train_loader, val_loader, loss, optimiser, device, grad_acc, epoch, log, iter_count, logger):
+        """ Detials """
+        def train(model, loader, loss_fun, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger):
+            """ Detials """
+            # loop execution setup
+            model.train()
+            pf_loss = 0
+            loss_acc = 0
+
+            # loop
+            for i, data in enumerate(loader):
+                # get batch
+                input, target = data
+                input = list(image.to(device) for image in input)
+                target = [{k: v.to(device) for k, v in t.items()} for t in target]
+
+                with autocast():
+                    output = model.forward(input)
+                    loss = sum(loss for loss in output.values())
+
+                loss = loss/grad_acc
+            
+                scaler.scale(loss).backward()
+                if grad_acc:
+                    if (i+1) % grad_acc == 0:
+                        scaler.step(optimiser)
+                        scaler.update()
+                        optimiser.zero_grad()
+                else:
+                    scaler.step(optimiser)
+                    scaler.update()
+                    optimiser.zero_grad()
+
+                # recording
+                loss_val = loss.item()
+                pf_loss += loss_val
+                loss_acc += loss_val
+
+                # reporting
+                pf_loss = logger.train_loop_reporter(epoch, iter_count, device, pf_loss)
+                iter_count += 1
+
+            # logging goes here
+            log["epochs"].append(epoch)
+            log["train_loss"].append(loss_acc/len(loader))
+
+            # returns
+
+        def validate(model, loader, loss_fun, device , epoch, log, logger):
+            """ Detials """
+            # loop execution setup
+            model.eval()
+            loss_acc = 0
+
+            for i, data in enumerate(loader):
+                # get batch
+                input, target = data
+                input = list(image.to(device) for image in input)
+                target = [{k: v.to(device) for k, v in t.items()} for t in target]
+
+                with torch.no_grad():
+                    output = model.forward(input)
+                    loss = sum(loss for loss in output.values())
+
+                loss_acc += loss.item()
+
+            loss = loss_acc/len(loader)
+            logger.val_loop_reporter(epoch, device, loss)
+            log["val_loss"].append(loss)
+                
+        # initial params
+        banner = "--------------------------------------------------------------------------------"
+        train_title = "Training"
+        val_title = "Validating"
+        scaler = torch.cuda.amp.GradScaler(enabled=True)
+
+        print(banner)
+        print(train_title)
+        print(banner)
+
+        train(model, train_loader, loss, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger)
+
+        print(banner)
+        print(val_title)
+        print(banner)
+
+        validate(model, val_loader, loss, device, epoch, log, logger) 
     
     def _multitask_action(self, model, train_loader, val_loader, loss, optimiser, device, grad_acc, epoch, log, iter_count, logger):
         """ Detials """
@@ -141,9 +230,9 @@ class Step():
 
                 with autocast():
                     # forward pass
-                    sup_output = model.forward(sup_im, sup_target, action="supervised")
+                    sup_output = model.forward(sup_im, sup_target, mode="segm")
                     sup_loss = sum(loss for loss in sup_output.values())
-                    sup_ssl_output = model.forward(sup_ssl_im, action="self_supervised")
+                    sup_ssl_output = model.forward(sup_ssl_im, mode="ssl")
                     sup_ssl_loss = loss(sup_ssl_output[0], sup_ssl_target)
 
                     #sup_loss /= primary_grad
@@ -163,7 +252,7 @@ class Step():
                         ssl_target = ssl_target.to(device)
 
                         # forward pass
-                        ssl_output = model.forward(ssl_im, action="self_supervised")
+                        ssl_output = model.forward(ssl_im, mode="ssl")
                         ssl_loss = loss(ssl_output, ssl_target)
 
                         ssl_loss /= secondar_grad
@@ -238,11 +327,11 @@ class Step():
                 with torch.no_grad():
                     with autocast():
                         # forward pass
-                        sup_output = model.forward(sup_im, sup_target, action="supervised")
+                        sup_output = model.forward(sup_im, sup_target, mode="segm")
                         sup_loss = sum(loss for loss in sup_output.values())
-                        sup_ssl_output = model.forward(sup_ssl_im, action="self_supervised")
+                        sup_ssl_output = model.forward(sup_ssl_im, mode="ssl")
                         sup_ssl_loss = loss(sup_ssl_output[0], sup_ssl_target)
-                        ssl_output = model.forward(ssl_im, action="self_supervised")
+                        ssl_output = model.forward(ssl_im, mode="ssl")
                         ssl_loss = loss(ssl_output, ssl_target)
                 
                         weighted_losses = awl(sup_loss, sup_ssl_loss, ssl_loss)
