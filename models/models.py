@@ -12,6 +12,7 @@ when the model attribute is called
 
 # local packages
 from .classification.rotnet_classifier_model import RotNet
+from .classification.jigsaw_classifier_model import Jigsaw
 from .multi_task.rotmask_multitask_model import RotMask_Multi_Task
 from .multi_task.rotmask_model_dev import rotmask_resnet50_fpn
 from .instance_segmentation.mask_rcnn_model import maskrcnn_resnet50_fpn
@@ -28,6 +29,7 @@ class Models():
         """ Initialize the Models class with the configuration dictionary """
         self.model_mapping = {
             "rotnet_resnet_50": RotNet,
+            "jigsaw": Jigsaw,
             "mask_rcnn":maskrcnn_resnet50_fpn,
             #"rotmask_multi_task": RotMask_Multi_Task,
             "rotmask_multi_task": rotmask_resnet50_fpn

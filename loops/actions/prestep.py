@@ -14,6 +14,7 @@ class PreStep():
     def action(self):
         self.action_map = {
             "rotnet_resnet_50": self._classifier_action,
+            "jigsaw": self._classifier_action,
             "mask_rcnn": self._instance_seg_action,
             "rotmask_multi_task": self._multitask_action
         }

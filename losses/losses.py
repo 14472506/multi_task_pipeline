@@ -25,6 +25,8 @@ class Losses():
         """ returns the selected loss when called """
         if self.model_type == "rotnet_resnet_50": 
             return self._classifier_loss
+        if self.model_type == "jigsaw": 
+            return self._classifier_loss
         if self.model_type == "rotmask_multi_task": 
             return [self._AWL(), self._classifier_loss]
         if self.model_type == "mask_rcnn":

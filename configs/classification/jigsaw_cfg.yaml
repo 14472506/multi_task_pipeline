@@ -1,0 +1,76 @@
+meta data:
+  version: "1.0"
+  desctiption: "Base config file for training RotNet self supervised classifier model using a selected directory of images"
+
+defaults: 
+  model_name: &model_name jigsaw
+  step: &step 50
+  seed: &seed 42
+
+loops:
+  device: "cuda:0"
+  grad_acc: null
+  start: 0
+  end: 20
+
+logs:
+  model_name: *model_name
+  logger_type: basic
+  print_freq: 20
+  iter_init: 0
+  best_init: .inf
+  step: *step
+  exp_dir: "jigsaw_dev" 
+  sub_dir: "dev_1"
+  last_title: last_model.pth
+  best_post_title: post_best.pth
+  best_pre_title: pre_best.path
+
+model:
+  model_name: *model_name
+  params:
+    backbone_type: pre-trained
+    num_tiles: 9
+    num_permutations: 100
+    batch_norm: false
+    trainable_layers: 5
+
+dataset:
+  source: data_handling/sources/refine_ssl
+  random_seed: *seed
+  params:
+    col_fn: null
+    model_name: *model_name
+    split:
+      train_test: 0.8
+      train_val: 0.8
+    num_rotations: 4
+    train:
+      batch_size: 4
+      shuffle: true
+      num_workers: 0
+      augmentations: true
+    val:
+      batch_size: 1
+      shuffle: false
+      num_workers: 0
+      augmentations: false
+    test:
+      batch_size: 1
+      shuffle: false
+      num_workers: 0
+      augmentations: false
+
+losses:
+  model_name: *model_name
+  params: []
+
+optimiser:
+  model_name: *model_name
+  opt_name: "Adam"
+  opt_params:
+    lr: 0.00005 
+  sched_name: "StepLR"
+  sched_params:
+    step: 5
+    gamma: 0.1
