@@ -27,7 +27,7 @@ class Jigsaw(nn.Module):
                                          nn.ReLU(inplace=True),
                                          nn.Linear(4096, self.num_permutations))
         
-    def extract_cfg(self):
+    def _extract_cfg(self):
         """ Detial """
         self.num_tiles = self.cfg["params"]["num_tiles"]
         self.num_permutations = self.cfg["params"]["num_permutations"]
@@ -35,8 +35,9 @@ class Jigsaw(nn.Module):
 
     def forward(self, x):
         """ Detials """
-        assert x.shape[1] == self.num_tiles
         device = x.device
+        assert x.shape[1] == self.num_tiles
+
         x = torch.stack([self.twin_network(self.backbone(tile)) for tile in x]).to(device)
         x = torch.flatten(x, start_dim = 1)
         x = self.classifier(x)

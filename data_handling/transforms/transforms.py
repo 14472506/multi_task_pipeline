@@ -17,6 +17,7 @@ class Transforms():
         """ Detials """
         transform_selector = {
             "rotnet_resnet_50": self._rotnet_transforms,
+            "jigsaw": self._jigsaw_transforms,
             "mask_rcnn": self._maskrcnn_tranforms,
             "rotmask_multi_task": self._multitask_transforms
         }
@@ -32,6 +33,22 @@ class Transforms():
             A.RandomBrightnessContrast(p=0.2)
             #A.RandomResizedCrop(300, 300, p=0.1)
         ], p=1)
+        return transforms
+    
+    def _jigsaw_transforms(self):
+        """
+        Implementation of Jigsaw augmentations 
+        """
+        transforms = A.Compose([
+            A.OneOf([
+                A.RandomBrightnessContrast(p=0.3),
+                A.ToGray(p=0.3),
+                A.ToGray(p=0.2),
+                A.Downscale(p=0.1),
+                A.ColorJitter(p=0.2)
+                ], p=0.8)
+            ], p=1)
+
         return transforms
     
     def _maskrcnn_tranforms(self):

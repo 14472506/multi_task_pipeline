@@ -6,12 +6,16 @@ defaults:
   model_name: &model_name jigsaw
   step: &step 50
   seed: &seed 42
+  num_tiles: &num_tiles 9
+  num_permutations: &num_permutations 100
 
 loops:
   device: "cuda:0"
   grad_acc: null
   start: 0
   end: 20
+  seed: *seed
+
 
 logs:
   model_name: *model_name
@@ -30,36 +34,40 @@ model:
   model_name: *model_name
   params:
     backbone_type: pre-trained
-    num_tiles: 9
-    num_permutations: 100
+    num_tiles: *num_tiles
+    num_permutations: *num_permutations
     batch_norm: false
     trainable_layers: 5
 
 dataset:
-  source: data_handling/sources/refine_ssl
-  random_seed: *seed
-  params:
-    col_fn: null
     model_name: *model_name
-    split:
-      train_test: 0.8
-      train_val: 0.8
-    num_rotations: 4
-    train:
-      batch_size: 4
-      shuffle: true
-      num_workers: 0
-      augmentations: true
-    val:
-      batch_size: 1
-      shuffle: false
-      num_workers: 0
-      augmentations: false
-    test:
-      batch_size: 1
-      shuffle: false
-      num_workers: 0
-      augmentations: false
+    source: data_handling/sources/refine_ssl
+    random_seed: *seed
+    col_fn: null
+    params:
+      col_fn: null
+      num_tiles: *num_tiles
+      num_permutations: *num_permutations
+      buffer: true
+      split:
+        train_test: 0.8
+        train_val: 0.8
+      num_rotations: 4
+      train:
+        batch_size: 4
+        shuffle: true
+        num_workers: 0
+        augmentations: true
+      val:
+        batch_size: 1
+        shuffle: false
+        num_workers: 0
+        augmentations: false
+      test:
+        batch_size: 1
+        shuffle: false
+        num_workers: 0
+        augmentations: false
 
 losses:
   model_name: *model_name

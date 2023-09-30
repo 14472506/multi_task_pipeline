@@ -74,6 +74,8 @@ class Logs():
         """ Detials """
         logs_mapper = {
             "rotnet_resnet_50": self._class_logs,
+            "jigsaw": self._class_logs,
+            "mask_rcnn": self._instance_seg_logs,
             "rotmask_multi_task": self._multitask_logs
         }
         return logs_mapper[self.model_name]()

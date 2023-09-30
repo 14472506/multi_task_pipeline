@@ -25,17 +25,15 @@ class COCODataset(data.Dataset):
 
     def _extract_config(self):
         """Detials"""
-        self.sup_source = self.cfg["source"][0]
+        self.sup_source = self.cfg["source"]
         self.type_dir = self.cfg["params"][self.type]["dir"]
         self.type_json = self.cfg["params"][self.type]["json"]
-        self.num_rotations = self.cfg["params"]["num_rotations"]
 
     def _initialize_params(self):
         """Detials"""
         self.coco = COCO(os.path.join(self.sup_source, self.type_dir, self.type_json))
         self.dir = os.path.join(self.sup_source, self.type_dir)
         self.ids = list(self.coco.imgs.keys())
-        self.rot_deg = np.linspace(0, 360, self.num_rotations + 1).tolist()[:-1]
 
     def __getitem__(self, idx):
         """Details"""

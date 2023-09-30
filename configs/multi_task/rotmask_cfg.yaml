@@ -22,7 +22,7 @@ logs:
   iter_init: 0
   best_init: .inf
   step: *step
-  exp_dir: "rotmask_full_test" 
+  exp_dir: "assisting_DELETE" 
   sub_dir: "dev_1"
   last_title: last_model.pth
   best_post_title: post_best.pth

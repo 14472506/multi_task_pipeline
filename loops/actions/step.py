@@ -124,7 +124,7 @@ class Step():
                 target = [{k: v.to(device) for k, v in t.items()} for t in target]
 
                 with autocast():
-                    output = model.forward(input)
+                    output = model.forward(input, target)
                     loss = sum(loss for loss in output.values())
 
                 loss = loss/grad_acc
@@ -158,7 +158,7 @@ class Step():
         def validate(model, loader, loss_fun, device , epoch, log, logger):
             """ Detials """
             # loop execution setup
-            model.eval()
+            model.train()
             loss_acc = 0
 
             for i, data in enumerate(loader):
@@ -168,7 +168,7 @@ class Step():
                 target = [{k: v.to(device) for k, v in t.items()} for t in target]
 
                 with torch.no_grad():
-                    output = model.forward(input)
+                    output = model.forward(input, target)
                     loss = sum(loss for loss in output.values())
 
                 loss_acc += loss.item()
@@ -221,6 +221,9 @@ class Step():
                 print("Adjusting by %s steps" %(ssl_adjust))
                 for i in range(ssl_adjust):
                     _, _ = next(ssl_iter)
+
+            # note: for 1, 2 in zip(cycle(sup_loader, ssl_loader))
+            # or: for i, (sup im, sup targ), (ssl_im, ssl_targ) in enumerate(zip(cycle(sup_loader))(ssl_loader))
                 
             for i in range(len(loader[0])):
                 sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)

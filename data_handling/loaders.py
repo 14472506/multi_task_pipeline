@@ -14,6 +14,7 @@ import torch
 import numpy as np
 
 # import local packages
+from .datasets.jigsaw import JigsawDataset
 from .datasets.rotnet import RotNetDataset
 from .datasets.coco import COCODataset
 from .datasets.coco_rotnet import COCORotDataset, COCO_collate_function
@@ -58,6 +59,7 @@ class Loaders():
         """ retirieve the dataloader based on the model type """
         dataset_selector = {
             "rotnet_resnet_50": RotNetDataset,
+            "jigsaw": JigsawDataset,
             "mask_rcnn": COCODataset,
             "rotmask_multi_task": [COCORotDataset, RotNetDataset],
         }
@@ -69,6 +71,8 @@ class Loaders():
         """ Return the data loader based on the config """
         loader_selector = {
             "rotnet_resnet_50": self._classifier_loader,
+            "jigsaw": self._classifier_loader,
+            "mask_rcnn": self._instance_loader,
             "rotmask_multi_task": self._multitask_loader
         }
         if self.type == "train":

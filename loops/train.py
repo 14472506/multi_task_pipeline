@@ -49,8 +49,6 @@ class Train():
         self._initialise_actions()        
         self._initialise_logs()
 
-        print(self.model)
-
     def train(self):
         """ Executes the main training loop based off the config dictionary """
         self._before_loop(self.model, self.cfg)

@@ -35,6 +35,37 @@ class RotNetWrapper(torch.utils.data.Dataset):
         """ Details """
         return len(self.dataset)
     
+class JigsawWrapper(torch.utils.data.Dataset):
+    """ Detials """
+    def __init__(self, dataset, transfroms):
+        self.dataset = dataset
+        self.transforms = transfroms
+
+    def __getitem__(self, idx):
+        """ Detials """
+        image, label = self.dataset[idx]
+        aug_stack = []
+        
+        # loop through base stack
+        for i in image:
+            pil_trans = T.ToPILImage()
+            pil = pil_trans(i)
+            np_img = np.array(pil)
+            transformed = self.transforms(image=np_img)["image"]
+            transformed = torch.tensor(transformed)
+            transformed = transformed.to(dtype=torch.float32)
+            aug_stack.append(transformed)
+
+        stack = torch.stack(aug_stack)
+        stack = stack.permute(0,3,1,2)
+        image = stack
+
+        return(image, label) 
+
+    def __len__(self):
+        """ Details """
+        return len(self.dataset)       
+        
 class InstanceWrapper(torch.utils.data.Dataset):
     """ detials """
     def __init__(self, dataset, transforms):
@@ -172,6 +203,7 @@ def wrappers(model_type):
     """ Detials """
     transform_select = {
         "rotnet_resnet_50": RotNetWrapper,
+        "jigsaw": JigsawWrapper,
         "mask_rcnn": InstanceWrapper,
         "rotmask_multi_task": MultiTaskWrapper
     }
