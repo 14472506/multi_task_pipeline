@@ -82,8 +82,14 @@ class Plotter():
 
         # Mark the best pre and post values
         plt.scatter([pre_best_epoch, post_best_epoch], [pre_best_val, post_best_val], color='red')
-        for label, x, y in zip(['Pre Best', 'Post Best'], [pre_best_epoch, post_best_epoch], [pre_best_val, post_best_val]):
-            plt.annotate(label, (x, y), textcoords="offset points", xytext=(0,10), ha='center')
+
+        # Updated annotation with best loss and epoch values
+        for label, x, y, epoch, val in zip(['Pre Best', 'Post Best'], 
+                                            [pre_best_epoch, post_best_epoch], 
+                                            [pre_best_val, post_best_val],
+                                            [pre_best_epoch, post_best_epoch],
+                                            [pre_best_val, post_best_val]):
+            plt.annotate(f'{label}\nEpoch: {epoch}\nLoss: {val:.2f}', (x, y), textcoords="offset points", xytext=(0,10), ha='center')
 
         # Add labels and legend
         plt.xlabel('Epochs')
