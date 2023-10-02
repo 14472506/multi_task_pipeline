@@ -28,6 +28,7 @@ def main(args):
     train_flag = args.train
     test_flag = args.test
     label_flag = args.label
+    plot_flag = args.plot 
     iterations = args.iters or 1
     path = args.path
 
@@ -80,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("-iters", type=int, default=1, help="Specify a number of execution iterations")
     parser.add_argument("-train", action="store_true", help="Specify if training should be executed")
     parser.add_argument("-test", action="store_true", help="Specify if testing should be executed")
-    parser.add_argyment("-plot", action="store_true", help="Specify if train and test results should be plotted")
+    parser.add_argument("-plot", action="store_true", help="Specify if train and test results should be plotted")
     parser.add_argument("-label", action="store_true", help="Specify if labeling should be executed")
     parser.add_argument("-path", type=str, default="", help="Provide the path to the directory for the labeling task")
 

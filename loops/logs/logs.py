@@ -176,7 +176,7 @@ class Logs():
         checkpoint = torch.load(path_mapper[type])
         model.load_state_dict(checkpoint["state_dict"])
 
-    def load_results(self):
+    def load_log(self):
         """ Details """
         log_title = "log.json"
         log_root = os.path.join(self.log_path, log_title)

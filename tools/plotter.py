@@ -5,10 +5,13 @@ of training for presentation
 """
 # imports
 # base packages
+import os
 
 # third party packages
+from matplotlib import pyplot as plt
 
 # local packages
+from loops import Logs
 
 # class
 class Plotter():
@@ -21,9 +24,9 @@ class Plotter():
 
         # initialise something? what do i call this again?
         self._initialise_optimiser()
-        self._initialise_logs
+        self._initialise_logs()
 
-    def plotter(self):
+    def plot(self):
         """ Detials """
         self.plotter_map = {
             "rotnet_resnet_50": self._classifier_plot,
@@ -35,7 +38,8 @@ class Plotter():
 
     def _extract_config(self):
         """ Details """
-        self.model_name = self.cfg["model_name"]
+        self.model_name = self.cfg["model"]["model_name"]
+
         self.optimiser_cfg = self.cfg["optimiser"]
         self.logs_cfg = self.cfg["logs"]
     
@@ -57,7 +61,41 @@ class Plotter():
 
     def _instance_seg_plot(self):
         """ Detials """
-        print("implement instance seg plotter")
+        log = self.logger.load_log()
+        #results = self.logger.load_results()
+
+        # extract logs
+        train_loss = log["train_loss"]
+        val_loss = log["val_loss"]
+        epochs = log["epochs"]
+        pre_best_val = log["pre_best_val"][-1]
+        post_best_val =  log["post_best_val"][-1]
+        pre_best_epoch = log["pre_best_epoch"][-1]
+        post_best_epoch =  log["post_best_epoch"][-1]
+
+        # Create a new figure
+        plt.figure()
+
+        # Plot training and validation loss
+        plt.plot(epochs, train_loss, label='Training Loss')
+        plt.plot(epochs, val_loss, label='Validation Loss')
+
+        # Mark the best pre and post values
+        plt.scatter([pre_best_epoch, post_best_epoch], [pre_best_val, post_best_val], color='red')
+        for label, x, y in zip(['Pre Best', 'Post Best'], [pre_best_epoch, post_best_epoch], [pre_best_val, post_best_val]):
+            plt.annotate(label, (x, y), textcoords="offset points", xytext=(0,10), ha='center')
+
+        # Add labels and legend
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title('Training and Validation Loss Over Epochs')
+
+        # Instead of plt.show(), use plt.savefig()
+        plt.savefig(os.path.join(self.logger.result_path, "plot.png"), format='png')
+        
+        # Optionally, you can close the figure after saving
+        plt.close()
 
     def _multitask_plot(self):
         """ Details """
