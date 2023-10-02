@@ -176,9 +176,25 @@ class Logs():
         checkpoint = torch.load(path_mapper[type])
         model.load_state_dict(checkpoint["state_dict"])
 
+    def load_results(self):
+        """ Details """
+        log_title = "log.json"
+        log_root = os.path.join(self.log_path, log_title)
+        with open(log_root) as log_file:
+            output = json.load(log_file)
+        return output
+
     def save_results(self, dict):
         """ Detials """
         results_title = "results.json"
         results_root = os.path.join(self.result_path, results_title)
         with open(results_root, "w") as results_file:
             json.dump(dict, results_file)
+
+    def load_results(self):
+        """ Detials """
+        results_title = "results.json"
+        results_root = os.path.join(self.result_path, results_title)
+        with open(results_root) as results_file:
+            output = json.load(results_file)
+        return output

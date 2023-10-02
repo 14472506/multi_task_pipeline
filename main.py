@@ -13,6 +13,7 @@ Usage:
 import argparse
 import yaml
 from loops import Train, Test
+from tools import PseudoLabeller, Plotter
 
 # main function
 def main(args):
@@ -26,27 +27,43 @@ def main(args):
     config_root = args.config
     train_flag = args.train
     test_flag = args.test
+    label_flag = args.label
     iterations = args.iters or 1
+    path = args.path
 
     # Load config file
     with open(config_root, 'r') as file:
         config = yaml.safe_load(file)
 
-    # Loop over the number of loop iterations
-    for i in range(iterations):
-        # Modify experiment subdirectory
-        amended_sub_dir = "model_" + str(i)
-        config["logs"]["sub_dir"] = amended_sub_dir
+    if train_flag or test_flag or plot_flag:
+        # Loop over the number of loop iterations
+        for i in range(iterations):
+            # Modify experiment subdirectory
+            amended_sub_dir = "model_" + str(i)
+            config["logs"]["sub_dir"] = amended_sub_dir
 
-        # Execute training
-        if train_flag:
-            trainer = Train(config)
-            trainer.train()
+            # Execute training
+            if train_flag:
+                trainer = Train(config)
+                trainer.train()
 
-        # Execute testing
-        if test_flag:
-            tester = Test(config)
-            tester.test()
+            # Execute testing
+            if test_flag:
+                tester = Test(config)
+                tester.test()
+
+            # carry out plotting
+            if plot_flag:
+                plotter = Plotter(config)
+                plotter.plot()
+    
+    if label_flag:
+        if not path:
+            print("path not provided")
+            return
+
+        labeller = PseudoLabeller(config, path)
+        labeller.label()
 
 # excecution
 if __name__ == "__main__":
@@ -63,6 +80,9 @@ if __name__ == "__main__":
     parser.add_argument("-iters", type=int, default=1, help="Specify a number of execution iterations")
     parser.add_argument("-train", action="store_true", help="Specify if training should be executed")
     parser.add_argument("-test", action="store_true", help="Specify if testing should be executed")
+    parser.add_argyment("-plot", action="store_true", help="Specify if train and test results should be plotted")
+    parser.add_argument("-label", action="store_true", help="Specify if labeling should be executed")
+    parser.add_argument("-path", type=str, default="", help="Provide the path to the directory for the labeling task")
 
     # Get parsed arguments
     args = parser.parse_args()
