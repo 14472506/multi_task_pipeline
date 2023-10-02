@@ -109,7 +109,7 @@ class Step():
 
     def _instance_seg_action(self, model, train_loader, val_loader, loss, optimiser, device, grad_acc, epoch, log, iter_count, logger):
         """ Detials """
-        def train(model, loader, loss_fun, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger):
+        def train(model, loader, loss_fun, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger, AWL_flag):
             """ Detials """
             # loop execution setup
             model.train()
@@ -125,7 +125,10 @@ class Step():
 
                 with autocast():
                     output = model.forward(input, target)
-                    loss = sum(loss for loss in output.values())
+                    if AWL_flag:
+                        loss = loss_fun(output["loss_classifier"], output["loss_box_reg"], output["loss_mask"], output["loss_objectness"], output["loss_rpn_box_reg"])
+                    else:
+                        loss = sum(loss for loss in output.values())
 
                 loss = loss/grad_acc
             
@@ -181,13 +184,19 @@ class Step():
         banner = "--------------------------------------------------------------------------------"
         train_title = "Training"
         val_title = "Validating"
+
+        if isinstance(loss, list):
+            loss = loss[1]
+            loss.to(device)
+            AWL_flag = True
+
         scaler = torch.cuda.amp.GradScaler(enabled=True)
 
         print(banner)
         print(train_title)
         print(banner)
 
-        train(model, train_loader, loss, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger)
+        train(model, train_loader, loss, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger, AWL_flag)
 
         print(banner)
         print(val_title)

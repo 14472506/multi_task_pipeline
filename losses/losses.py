@@ -30,6 +30,8 @@ class Losses():
         if self.model_type == "rotmask_multi_task": 
             return [self._AWL(), self._classifier_loss]
         if self.model_type == "mask_rcnn":
+            if self.cfg["params"]["awl"]:
+                return [self._instance_seg_loss, self._AWL(5)]
             return self._instance_seg_loss
 
     def _classifier_loss(self, target, pred):
@@ -42,9 +44,9 @@ class Losses():
         loss = None
         return loss
     
-    def _AWL(self):
+    def _AWL(self, num_losses=3):
         """ returns the automaticaly weighted loss """
-        loss = AutomaticWeightedLoss()
+        loss = AutomaticWeightedLoss(num_losses)
         return loss
 
 class AutomaticWeightedLoss(nn.Module):

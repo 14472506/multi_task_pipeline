@@ -8,7 +8,7 @@ defaults:
   seed: &seed 42
 
 loops:
-  device: "cuda:0"
+  device: "cuda:3"
   grad_acc: 1
   start: 0
   end: 80
@@ -21,7 +21,7 @@ logs:
   iter_init: 0
   best_init: .inf
   step: *step
-  exp_dir: "mask_rcnn_dev" 
+  exp_dir: "mrcnn_awl_tests" 
   sub_dir: "dev_1"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -65,7 +65,8 @@ dataset:
 
 losses:
   model_name: *model_name
-  params: []
+  params: 
+    awl: true
 
 optimiser:
   model_name: *model_name

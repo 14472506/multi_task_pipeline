@@ -32,7 +32,7 @@ class PreLoop():
     def _instance_seg_action(self, model, cfg):
         """ Details """
         banner = "================================================================================"
-        title = " Classifier Training "
+        title = " Instance Seg Training "
 
         # Load model weights here.
 
