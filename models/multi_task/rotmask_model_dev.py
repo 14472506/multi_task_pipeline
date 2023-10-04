@@ -96,6 +96,8 @@ def rotmask_resnet50_fpn(cfg):
     trainable_layers = cfg["params"]["trainable_layers"]
     num_classes = cfg["params"]["num_classes"]
     hidden_layers = cfg["params"]["hidden_layers"]
+    min_size = cfg["params"]["min_size"]
+    max_size = cfg["params"]["max_size"]
 
     # backbone selecting
     if backbone_type == "pre-trained":
@@ -112,7 +114,7 @@ def rotmask_resnet50_fpn(cfg):
     if drop_out:
         backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
 
-    model = RotMaskRCNN(backbone, num_classes, num_rots, batch_norm, drop_out)
+    model = RotMaskRCNN(backbone, num_classes, num_rots, batch_norm, drop_out, max_size=max_size, min_size=min_size)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels

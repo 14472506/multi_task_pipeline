@@ -35,6 +35,8 @@ model:
     num_classes: 2
     hidden_layers: 256
     drop_out: 0.5
+    min_size: 480
+    max_size: 640
 
 dataset:
   source: data_handling/sources/jersey_dataset_v4
