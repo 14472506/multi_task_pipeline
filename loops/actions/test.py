@@ -47,12 +47,12 @@ class TestAction():
                     with torch.no_grad():
                         predictions = model(input)
 
-                masks_in = predictions[0]["masks"].cpu().detach()
+                masks_in = predictions[0]["masks"].detach().cpu()
                 masks_in = masks_in > 0.5
                 masks_in = masks_in.squeeze(1) 
                 targs_masks = target[0]["masks"].bool()
                 targs_masks = targs_masks.squeeze(1)  
-                preds = [dict(masks=masks_in, scores=predictions[0]["scores"].cpu().detach(), labels=predictions[0]["labels"].cpu().detach(),)]
+                preds = [dict(masks=masks_in, scores=predictions[0]["scores"].detach().cpu(), labels=predictions[0]["labels"].detach().cpu(),)]
                 targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
                 metric.update(preds, targs)
 
