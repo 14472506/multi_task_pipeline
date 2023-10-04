@@ -162,6 +162,10 @@ class Step():
             """ Detials """
             # loop execution setup
             model.train()
+            if hasattr(model.backbone.body.layer4, "dropout"):
+                p = model.backbone.body.layer4.dropout.p
+                model.backbone.body.layer4.dropout.p = 0
+
             loss_acc = 0
 
             for i, data in enumerate(loader):
@@ -175,6 +179,10 @@ class Step():
                     loss = sum(loss for loss in output.values())
 
                 loss_acc += loss.item()
+
+            # model re config
+            if hasattr(model.backbone.body.layer4, "dropout"):
+                model.backbone.body.layer4.dropout.p = p
 
             loss = loss_acc/len(loader)
             logger.val_loop_reporter(epoch, device, loss)
@@ -268,13 +276,13 @@ class Step():
                         ssl_output = model.forward(ssl_im, mode="ssl")
                         ssl_loss = loss(ssl_output, ssl_target)
 
-                        ssl_loss /= secondar_grad
+                        ssl_loss =+ ssl_loss.div_(secondar_grad)
 
                     ssl_loss_acc += ssl_loss.item()
                     weighted_losses = awl(sup_loss, sup_ssl_loss, ssl_loss)
                     weighted_losses_acc += weighted_losses.item()
                     pf_loss += weighted_losses.item()
-                
+                                
                 scaler.scale(weighted_losses).backward()
                 if (i+1) % primary_grad == 0:
                     # optimiser step
@@ -285,6 +293,11 @@ class Step():
                 # reporting
                 pf_loss = logger.train_loop_reporter(epoch, iter_count, device, pf_loss)
                 iter_count += 1
+
+                # Clear GPU Memory
+                del sup_im, sup_target, sup_ssl_im, sup_ssl_target, sup_output, sup_ssl_output, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im
+                torch.cuda.empty_cache()
+                gc.collect()
 
             # accumulating iter count for ssl iter adjust
             log["iter_accume"] += iter_count*secondar_grad
@@ -299,7 +312,12 @@ class Step():
         def validate(model, loader, loss_fun, device , epoch, log, logger):
             """ Detials """
             # loop execution setup
-            model.train()
+            # configure model
+            model.train()            
+            if hasattr(model.backbone.body.layer4, "dropout"):
+                p = model.backbone.body.layer4.dropout.p
+                model.backbone.body.layer4.dropout.p = 0
+                
             sup_loss_acc = 0
             sup_ssl_loss_acc = 0
             ssl_loss_acc = 0
@@ -354,7 +372,16 @@ class Step():
                 sup_ssl_loss_acc += sup_ssl_loss.item()
                 ssl_loss_acc += ssl_loss.item()
                 weighted_losses_acc += weighted_losses.item()
-            
+
+                # Clear GPU Memory
+                del sup_im, sup_target, sup_ssl_im, sup_ssl_target, sup_output, sup_ssl_output, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im
+                torch.cuda.empty_cache()
+                gc.collect()
+
+            # model re config
+            if hasattr(model.backbone.body.layer4, "dropout"):
+                model.backbone.body.layer4.dropout.p = p
+
             # adjusting val iter accumulation for ssl step adjust
             log["val_it_accume"] += len(loader[0])
 

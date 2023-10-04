@@ -34,6 +34,7 @@ model:
     trainable_layers: 5
     num_classes: 2
     hidden_layers: 256
+    drop_out: 0.5
 
 dataset:
   source: data_handling/sources/jersey_dataset_v4

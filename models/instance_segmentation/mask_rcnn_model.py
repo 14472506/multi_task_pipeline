@@ -17,6 +17,7 @@ def maskrcnn_resnet50_fpn(cfg):
     trainable_layers = cfg["params"]["trainable_layers"]
     num_classes = cfg["params"]["num_classes"]
     hidden_layers = cfg["params"]["hidden_layers"]
+    drop_out = cfg["params"]["drop_out"]
 
     # backbone selecting
     if backbone_type == "pre-trained":
@@ -29,6 +30,9 @@ def maskrcnn_resnet50_fpn(cfg):
                     backbone_name="resnet50",
                     weights=False,
                     trainable_layers=trainable_layers)
+
+    if drop_out:
+        backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
 
     model = torchvision.models.detection.MaskRCNN(backbone, num_classes)
     in_features = model.roi_heads.box_predictor.cls_score.in_features

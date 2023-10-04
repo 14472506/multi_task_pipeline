@@ -149,7 +149,7 @@ class COCORotDataset(data.Dataset):
 
         return cropped_img
     
-    def _resize(self, img, size=1000):
+    def _resize(self, img, size=500):
         """ Detials """
         resized_img = img.resize((size, size))
         return(resized_img)
