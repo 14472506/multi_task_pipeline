@@ -20,10 +20,10 @@ logs:
   logger_type: basic
   print_freq: 10
   iter_init: 0
-  best_init: .inf
+  best_init: [.inf, 0]
   step: *step
   exp_dir: "1333x800_epoch_test" 
-  sub_dir: "model_1"
+  sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
   best_pre_title: pre_best.path

@@ -8,6 +8,7 @@ import pickle
 import os
 import numpy as np
 from .coco_eval_files.coco_evaluation import evaluate
+import gc
 
 # class
 class TestAction():
@@ -56,7 +57,7 @@ class TestAction():
                 targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
                 metric.update(preds, targs)
 
-                del predictions, input, target
+                del predictions, input, target, masks_in, targs_masks, preds, targs
                 torch.cuda.empty_cache()
                 print("batch %s complete" %(i))
             
