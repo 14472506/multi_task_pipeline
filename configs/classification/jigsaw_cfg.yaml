@@ -10,10 +10,10 @@ defaults:
   num_permutations: &num_permutations 100
 
 loops:
-  device: "cuda:0"
+  device: "cuda:1"
   grad_acc: null
   start: 0
-  end: 20
+  end: 50
   seed: *seed
 
 
@@ -24,8 +24,8 @@ logs:
   iter_init: 0
   best_init: .inf
   step: *step
-  exp_dir: "jigsaw_dev" 
-  sub_dir: "dev_1"
+  exp_dir: "jigsaw_pt" 
+  sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
   best_pre_title: pre_best.path
@@ -41,7 +41,7 @@ model:
 
 dataset:
     model_name: *model_name
-    source: data_handling/sources/refine_ssl
+    source: data_handling/sources/All_RGB
     random_seed: *seed
     col_fn: null
     params:
@@ -52,7 +52,6 @@ dataset:
       split:
         train_test: 0.8
         train_val: 0.8
-      num_rotations: 4
       train:
         batch_size: 4
         shuffle: true
@@ -80,5 +79,5 @@ optimiser:
     lr: 0.00005 
   sched_name: "StepLR"
   sched_params:
-    step: 5
+    step: *step
     gamma: 0.1
