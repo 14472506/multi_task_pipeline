@@ -123,6 +123,11 @@ class Logs():
                 "pre_best_epoch": [],
                 "post_best_val": [],
                 "post_best_epoch": [],
+                "post_best_map":[],
+                "post_best_map_epoch": [],
+                "pre_best_map": [],
+                "pre_best_map_epoch": [],
+                "map": [],
                 "iter_accume": 0,
                 "val_it_accume": 0
             }

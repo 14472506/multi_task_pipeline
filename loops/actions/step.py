@@ -4,6 +4,7 @@ Detials
 # imports
 import torch
 from torch.cuda.amp import autocast
+from torchmetrics.detection import MeanAveragePrecision
 import gc
 
 # class
@@ -382,6 +383,34 @@ class Step():
             if hasattr(model.backbone.body.layer4, "dropout"):
                 model.backbone.body.layer4.dropout.p = p
 
+            # set form map evaluation
+            model.eval()
+            metric = MeanAveragePrecision(iou_type = "segm")
+            sup_iter = iter(loader[0])
+
+            for i in range(len(loader[0])):
+                input, target, _, _ = next(sup_iter)
+                input = list(image.to(device) for image in input)
+        
+                with torch.autocast("cuda"):
+                    with torch.no_grad():
+                        predictions = model(input)
+
+                masks_in = predictions[0]["masks"].detach().cpu()
+                masks_in = masks_in > 0.5
+                masks_in = masks_in.squeeze(1) 
+                targs_masks = target[0]["masks"].bool()
+                targs_masks = targs_masks.squeeze(1)  
+                preds = [dict(masks=masks_in, scores=predictions[0]["scores"].detach().cpu(), labels=predictions[0]["labels"].detach().cpu(),)]
+                targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
+                metric.update(preds, targs)
+
+                del predictions, input, target, masks_in, targs_masks, preds, targs
+                torch.cuda.empty_cache()
+            
+            res = metric.compute()
+            map = res["map"].item()
+
             # adjusting val iter accumulation for ssl step adjust
             log["val_it_accume"] += len(loader[0])
 
@@ -390,8 +419,9 @@ class Step():
             log["val_sup_loss"].append(sup_loss_acc/len(loader[0]))
             log["val_sup_ssl_loss"].append(sup_ssl_loss_acc/len(loader[0]))
             log["val_ssl_loss"].append(ssl_loss_acc/len(loader[0]))
+            log["map"].append(map)
             
-            logger.val_loop_reporter(epoch, device, log["val_sup_loss"][-1])
+            logger.val_loop_reporter(epoch, device, log["map"][-1])
 
         # initial params
         banner = "--------------------------------------------------------------------------------"

@@ -20,9 +20,9 @@ logs:
   logger_type: basic
   print_freq: 10
   iter_init: 0
-  best_init: .inf
+  best_init: [.inf, 0]
   step: *step
-  exp_dir: "800x480_epoch_test" 
+  exp_dir: "1333x800_epoch_test" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -38,8 +38,8 @@ model:
     trainable_layers: 5
     num_classes: 2
     hidden_layers: 256
-    min_size: 480
-    max_size: 800
+    min_size: 800
+    max_size: 1333
 
 dataset:
   source: [data_handling/sources/jersey_dataset_v4, data_handling/sources/All_RGB]
