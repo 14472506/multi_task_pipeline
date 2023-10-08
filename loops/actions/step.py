@@ -280,7 +280,7 @@ class Step():
                         ssl_loss =+ ssl_loss.div_(secondar_grad)
 
                     ssl_loss_acc += ssl_loss.item()
-                    weighted_losses = awl(sup_loss, sup_ssl_loss, ssl_loss)
+                    weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], sup_ssl_loss, ssl_loss)
                     weighted_losses_acc += weighted_losses.item()
                     pf_loss += weighted_losses.item()
                                 
