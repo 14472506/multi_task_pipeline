@@ -62,7 +62,8 @@ def main(args):
         if not path:
             print("path not provided")
             return
-
+        config["loops"]["device"] = "cuda:1"
+        config["model"]["params"]["drop_out"] = None
         labeller = PseudoLabeller(config, path)
         labeller.label()
 

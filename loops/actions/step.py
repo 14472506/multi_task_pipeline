@@ -240,8 +240,12 @@ class Step():
                 for i in range(ssl_adjust):
                     _, _ = next(ssl_iter)
 
+            # Notes: Dont reset the iterator for the larger model at the begining of each epoch, only when the iterator runs out
+
             # note: for 1, 2 in zip(cycle(sup_loader, ssl_loader))
             # or: for i, (sup im, sup targ), (ssl_im, ssl_targ) in enumerate(zip(cycle(sup_loader))(ssl_loader))
+
+            # while not sup_iter.end()
                 
             for i in range(len(loader[0])):
                 sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)

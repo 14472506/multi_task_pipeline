@@ -7,12 +7,15 @@ model training process.
 # import
 # base packages
 import os
+import gc
 
 # third party packages
 from PIL import Image
 import torch
 from torchvision.transforms import functional as F
 import numpy as np
+from pycocotools import mask as M
+from skimage import measure
 
 # local packages
 from models import Models
@@ -85,7 +88,21 @@ class PseudoLabeller():
             "annotations": [],
             "categories": []
         }
+
+        # adding category to coco data
+        category_data = {
+            "id": 1,
+            "name": "Pseudo Royal",
+            "supercategory": "",
+            "color": "#e24b1d",
+            "metadata": {},
+            "keypoint_colours": []
+        }
+        coco_data["categories"].append(category_data)
+
+        # defining id counts
         annotation_id = 0
+        image_id = 0
 
         for filename in os.listdir(self.data_path):
             # get an image from the target directory or skip to the next loop
@@ -95,23 +112,55 @@ class PseudoLabeller():
                 input_tensor = F.to_tensor(image).unsqueeze(0)
                 input_tensor = input_tensor.to(self.device)
 
+                width, height = image.size 
+
+                image_data = {
+                    "id": image_id,
+                    "dataset_id": 1,
+                    "path": self.data_path,
+                    "width": width,
+                    "height": height,
+                    "file_name": file_name
+                    }
+                coco_data["images"].append(image_data)
+
                 # get outputs from model
                 with torch.no_grad():
                     prediction = self.model(input_tensor)
                 outputs = self._filter_predictions(prediction)
 
+                del prediction, image, input_tensor
+                torch.cuda.empty_cache()
+
                 # make coco dataset 
                 for i in range(len(outputs["labels"])):
-                
-                    annotation_id += 1
                     mask = outputs['masks'][i].numpy()
-                    category_id = int(outputs['labels'][i])
-                    score = float(outputs['scores'][i])
-                    bbox = outputs['boxes'][i].tolist()
+                    annotations, area = self._mask_to_polygon(mask)
 
-                    rle = self._mask_to_rle(mask)
+                    annotation = {
+                        "id": annotation_id,
+                        "image_id": image_id,
+                        "category_id": int(outputs['labels'][i]),
+                        "segmentation": annotrations,
+                        "area": area,
+                        "bbox":	outputs['boxes'][i].tolist(),
+                        "iscrowd": False,
+                        "isbbox": False,
+                        "color": "#0dd36a",
+                        "keypoints": [],
+                        "metadata": {}
+                        }
+                    coco_data["annotations"].append(annotations)
+                
+                    del mask, annotations, area
+                    torch.cuda.empty_cache()
+                    print(coco_data)
 
-                    print(rle)
+                    annotation_id += 1
+
+                torch.cuda.empty_cache()
+                
+                image_id += 1
 
     def _filter_predictions(self, predictions, threshold=0.5):
         """ Filters the predicted masks to get the masks and meta data from the model """
@@ -126,16 +175,29 @@ class PseudoLabeller():
 
         return(outputs)
 
-    def _mask_to_rle(self, mask):
-        # Flatten the mask and find runs of 1s
-        mask = mask.flatten()
-        mask = np.concatenate([[0], mask, [0]])
-        runs = np.where(mask[1:] != mask[:-1])[0] + 1
-        runs[1::2] -= runs[::2]
-        return ' '.join(str(x) for x in runs)
+    def _mask_to_polygon(self, mask):
+        """ 
+        requires a mask as an input and returns the polyon, in adition the function also
+        returns the area.
 
-        # implement this!
-        # https://github.com/cocodataset/cocoapi/issues/131
+        mask input in must be binary and numpy array 
+        """
+        mask = mask[0].astype(np.uint8)
+
+        # area
+        fortran_mask = np.asfortranarray(mask)
+        encoded_mask = M.encode(fortran_mask)
+        area = M.area(encoded_mask)
+
+        # annotrations
+        contours = measure.find_contours(mask)
+        annotations = []
+        for contour in contours:
+            contour = np.flip(contour, axis=1)
+            segmentation = contour.ravel().tolist(),
+            annotations.append(segmentation)
+        
+        return annotations, area
 
     
 
