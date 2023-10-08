@@ -28,7 +28,7 @@ class Losses():
         if self.model_type == "jigsaw": 
             return self._classifier_loss
         if self.model_type == "rotmask_multi_task": 
-            return [self._AWL(), self._classifier_loss]
+            return [self._AWL(7), self._classifier_loss]
         if self.model_type == "mask_rcnn":
             if self.cfg["params"]["awl"]:
                 return [self._instance_seg_loss, self._AWL(5)]
