@@ -9,8 +9,8 @@ defaults:
   seed: &seed 42
 
 loops:
-  device: "cuda:2"
-  grad_acc: [1, 8]
+  device: "cuda:0"
+  grad_acc: [1, 1]
   start: 0
   end: 130
   seed: *seed
@@ -22,7 +22,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "1333x800_epoch_test" 
+  exp_dir: "1333x800_awl_exp" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -55,7 +55,7 @@ dataset:
     train:
       dir: train
       json: train.json
-      batch_size: [1, 1]
+      batch_size: [1, 8]
       shuffle: true
       num_workers: 0
       augmentations: true
