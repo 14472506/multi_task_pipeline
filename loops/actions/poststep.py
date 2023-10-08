@@ -61,12 +61,12 @@ class PostStep():
                 logs["post_best_map"].append(logs["map"][-1])
                 logs["post_best_map_epoch"].append(epoch)
                 logger.save_model(epoch, model, optimiser, "post")
-                logger.best[0] = logs["post_map"][-1]
+                logger.best[1] = logs["map"][-1]
             else:
                 logs["pre_best_map"].append(logs["map"][-1])
                 logs["pre_best_map_epoch"].append(epoch)
                 logger.save_model(epoch, model, optimiser, "pre")
-                logger.best[0] = logs["pre_best_map"][-1]
+                logger.best[1] = logs["map"][-1]
 
         logger.update_log_file(logs)
 
