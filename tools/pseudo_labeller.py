@@ -13,6 +13,8 @@ from PIL import Image
 import torch
 from torchvision.transforms import functional as F
 import numpy as np
+from pycocotools import mask as M
+from skimage import measure
 
 # local packages
 from models import Models
@@ -103,15 +105,15 @@ class PseudoLabeller():
                 # make coco dataset 
                 for i in range(len(outputs["labels"])):
                 
-                    annotation_id += 1
+                    #annotation_id += 1
                     mask = outputs['masks'][i].numpy()
-                    category_id = int(outputs['labels'][i])
-                    score = float(outputs['scores'][i])
-                    bbox = outputs['boxes'][i].tolist()
+                    #category_id = int(outputs['labels'][i])
+                    #score = float(outputs['scores'][i])
+                    #bbox = outputs['boxes'][i].tolist()
 
-                    rle = self._mask_to_rle(mask)
+                    annotations, area = self._mask_to_polygon(mask)
 
-                    print(rle)
+                    print(annotations, area)
 
     def _filter_predictions(self, predictions, threshold=0.5):
         """ Filters the predicted masks to get the masks and meta data from the model """
@@ -126,13 +128,32 @@ class PseudoLabeller():
 
         return(outputs)
 
-    def _mask_to_rle(self, mask):
-        # Flatten the mask and find runs of 1s
-        mask = mask.flatten()
-        mask = np.concatenate([[0], mask, [0]])
-        runs = np.where(mask[1:] != mask[:-1])[0] + 1
-        runs[1::2] -= runs[::2]
-        return ' '.join(str(x) for x in runs)
+    def _mask_to_polygon(self, mask):
+        """ 
+        requires a mask as an input and returns the polyon, in adition the function also
+        returns the area.
+
+        mask input in must be binary and numpy array 
+        """
+        # area
+        fortran_mask = np.asfortranarray(mask)
+        encoded_mask = mask.encode(fortran_mask)
+        area = mask.area(encoded_mask)
+
+        # annotrations
+        contours = measure.find_contours(mask)
+        annotations = []
+        for contour in contours:
+            contour = np.flip(contour, axis=1)
+            segmentation = contour.reval().tolist(),
+            annotations.append(segmentation)
+        
+        return annotations, area
+            
+
+
+
+
 
         # implement this!
         # https://github.com/cocodataset/cocoapi/issues/131
