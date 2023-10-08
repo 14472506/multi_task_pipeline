@@ -2,48 +2,53 @@ meta data:
   version: "1.0"
   desctiption: "Base config file for training RotNet self supervised classifier model using a selected directory of images"
 
+defaults: 
+  model_name: &model_name rotnet_resnet_50
+  step: &step 50
+  seed: &seed 42
+
 loops:
-  device: "cuda:0"
+  device: "cuda:3"
   grad_acc: null
   start: 0
-  end: 20
-
+  end: 50
+  seed: *seed
 
 logs:
-  model_name: rotnet_resnet_50
+  model_name: *model_name
   logger_type: basic
   print_freq: 20
   iter_init: 0
   best_init: .inf
-  step: 200
-  exp_dir: "dev" 
-  sub_dir: "dev_1"
+  step: *step
+  exp_dir: "rotnet_pt" 
+  sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
   best_pre_title: pre_best.path
 
-
 model:
-  model_name: rotnet_resnet_50
+  model_name: *model_name
   params:
     backbone_type: pre-trained
     num_rotations: 4
-    drop_out: 0.2
+    drop_out: 0.5
     batch_norm: false
     trainable_layers: 5
 
 dataset:
-  source: data_handling/sources/refine_ssl
-  random_seed: 42
+  source: data_handling/sources/All_RGB
+  random_seed: *seed
+  model_name: *model_name
+  col_fn: null
   params:
     col_fn: null
-    model_name: rotnet_resnet_50
     split:
       train_test: 0.8
       train_val: 0.8
     num_rotations: 4
     train:
-      batch_size: 4
+      batch_size: 8
       shuffle: true
       num_workers: 0
       augmentations: true
@@ -59,11 +64,11 @@ dataset:
       augmentations: false
 
 losses:
-  model_name: rotnet_resnet_50
+  model_name: *model_name
   params: []
 
 optimiser:
-  model_name: "rotnet_resnet_50"
+  model_name: *model_name
   opt_name: "Adam"
   opt_params:
     lr: 0.00005 
