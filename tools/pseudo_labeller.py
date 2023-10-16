@@ -150,7 +150,7 @@ class PseudoLabeller():
                         "keypoints": [],
                         "metadata": {}
                         }
-                    coco_data["annotations"].append(annotations)
+                    coco_data["annotations"].append(annotation)
                 
                     del mask, annotations, area
                     torch.cuda.empty_cache()
