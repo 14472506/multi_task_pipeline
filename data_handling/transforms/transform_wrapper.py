@@ -205,6 +205,7 @@ def wrappers(model_type):
         "rotnet_resnet_50": RotNetWrapper,
         "jigsaw": JigsawWrapper,
         "mask_rcnn": InstanceWrapper,
-        "rotmask_multi_task": MultiTaskWrapper
+        "rotmask_multi_task": MultiTaskWrapper,
+        "dual_mask_multi_task": InstanceWrapper
     }
     return transform_select[model_type]

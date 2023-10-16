@@ -31,8 +31,12 @@ class COCODataset(data.Dataset):
 
     def _initialize_params(self):
         """Detials"""
-        self.coco = COCO(os.path.join(self.sup_source, self.type_dir, self.type_json))
-        self.dir = os.path.join(self.sup_source, self.type_dir)
+        if not self.type_dir:
+            self.coco = COCO(os.path.join(self.sup_source, self.type_json))
+            self.dir = self.sup_source
+        else:
+            self.coco = COCO(os.path.join(self.sup_source, self.type_dir, self.type_json))
+            self.dir = os.path.join(self.sup_source, self.type_dir)
         self.ids = list(self.coco.imgs.keys())
 
     def __getitem__(self, idx):

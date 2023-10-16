@@ -30,7 +30,6 @@ def maskrcnn_resnet50_fpn(cfg):
                     backbone_name="resnet50",
                     weights=False,
                     trainable_layers=trainable_layers)
-
     if drop_out:
         backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
 
