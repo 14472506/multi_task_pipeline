@@ -3,13 +3,14 @@ meta_data:
   description: "Base config file for training RotNet self supervised classifier model using a selected directory of images"
 
 defaults: 
-  model_name: &model_name mask_rcnn
+  model_name: &model_name dual_mask_multi_task
   step: &step 100
+  num_rotations: &num_rotations 4
   seed: &seed 42
 
 loops:
   device: "cuda:0"
-  grad_acc: 1
+  grad_acc: [1, 1]
   start: 0
   end: 130
   seed: *seed
@@ -17,51 +18,52 @@ loops:
 logs:
   model_name: *model_name
   logger_type: basic
-  print_freq: 5
+  print_freq: 10
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "mrcnn_map_exp_130" 
-  sub_dir: "dev_1"
+  exp_dir: "dual_mask_data_multi_awl" 
+  sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
-  best_pre_title: pre_best.path
+  best_pre_title: pre_best.pth
 
 model:
   model_name: *model_name
   params:
     backbone_type: pre-trained
+    drop_out: 0.5
+    batch_norm: false
     trainable_layers: 5
     num_classes: 2
     hidden_layers: 256
-    drop_out: 0.5
     min_size: 800
     max_size: 1333
 
 dataset:
-  source: data_handling/sources/jersey_dataset_v4
+  source: [data_handling/sources/jersey_dataset_v4, data_handling/sources/pseudo_labels]
   random_seed: *seed
   model_name: *model_name
   col_fn: true
   params:
     train:
-      dir: train
-      json: train.json
-      batch_size: 1
+      dir: [train, null]
+      json: [train.json, train_v2.json]
+      batch_size: [1, 1]
       shuffle: true
       num_workers: 0
       augmentations: true
     val:
-      dir: val
-      json: val.json
-      batch_size: 1
+      dir: [val, null]
+      json: [val.json, val_v2.json]
+      batch_size: [1, 1]
       shuffle: false
       num_workers: 0
       augmentations: false
     test:
-      dir: test
-      json: test.json
-      batch_size: 1
+      dir: [test, null]
+      json: [test.json, test_v2.json]
+      batch_size: [1, 1]
       shuffle: false
       num_workers: 0
       augmentations: false
@@ -69,7 +71,7 @@ dataset:
 losses:
   model_name: *model_name
   params: 
-    awl: false
+    awl: true
 
 optimiser:
   model_name: *model_name

@@ -17,7 +17,8 @@ class PostStep():
             "rotnet_resnet_50": self._classifier_action,
             "jigsaw": self._classifier_action,
             "mask_rcnn": self._instance_seg_action,
-            "rotmask_multi_task": self._multitask_action
+            "rotmask_multi_task": self._multitask_action,
+            "dual_mask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]
 
@@ -77,17 +78,27 @@ class PostStep():
         """ Detials """
         logger.save_model(epoch, model, optimiser, "last")
 
-        if logs["val_loss"][-1] <= logger.best:
+        if logs["val_loss"][-1] <= logger.best[0]:
             if self.stepped:
                 logs["post_best_val"].append(logs["val_loss"][-1])
                 logs["post_best_epoch"].append(epoch)
-                logger.save_model(epoch, model, optimiser, "post")
-                logger.best = logs["val_loss"][-1]
+                logger.best[0] = logs["val_loss"][-1]
             else:
                 logs["pre_best_val"].append(logs["val_loss"][-1])
                 logs["pre_best_epoch"].append(epoch)
+                logger.best[0] = logs["val_loss"][-1]
+        
+        if logs["map"][-1] >= logger.best[1]:
+            if self.stepped:
+                logs["post_best_map"].append(logs["map"][-1])
+                logs["post_best_map_epoch"].append(epoch)
+                logger.save_model(epoch, model, optimiser, "post")
+                logger.best[1] = logs["map"][-1]
+            else:
+                logs["pre_best_map"].append(logs["map"][-1])
+                logs["pre_best_map_epoch"].append(epoch)
                 logger.save_model(epoch, model, optimiser, "pre")
-                logger.best = logs["val_loss"][-1]
+                logger.best[1] = logs["map"][-1]
 
         logger.update_log_file(logs)
 

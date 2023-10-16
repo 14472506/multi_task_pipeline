@@ -8,9 +8,10 @@ model training process.
 # base packages
 import os
 import gc
+import json
 
 # third party packages
-from PIL import Image
+from PIL import Image, ImageDraw
 import torch
 from torchvision.transforms import functional as F
 import numpy as np
@@ -71,10 +72,10 @@ class PseudoLabeller():
 
     def _load_model(self):
         """ Load the trained inference model """
-        if self.step:
-            model_type = "pre"
-        else:
-            model_type = "post"
+        #if self.step:
+        model_type = "pre"
+        #else:
+        #    model_type = "post"
         self.logger.load_model(self.model, model_type)
 
     def label(self):
@@ -104,6 +105,10 @@ class PseudoLabeller():
         annotation_id = 0
         image_id = 0
 
+        # for json naming conv
+        init_id = 0
+        dif = 0
+
         for filename in os.listdir(self.data_path):
             # get an image from the target directory or skip to the next loop
             if filename.endswith(".jpg"):
@@ -113,36 +118,43 @@ class PseudoLabeller():
                 input_tensor = input_tensor.to(self.device)
 
                 width, height = image.size 
-
-                image_data = {
-                    "id": image_id,
-                    "dataset_id": 1,
-                    "path": self.data_path,
-                    "width": width,
-                    "height": height,
-                    "file_name": file_name
-                    }
-                coco_data["images"].append(image_data)
-
                 # get outputs from model
                 with torch.no_grad():
-                    prediction = self.model(input_tensor)
+                    prediction = self.model(input_tensor, mode="sup")
                 outputs = self._filter_predictions(prediction)
 
-                del prediction, image, input_tensor
+                del prediction, input_tensor
                 torch.cuda.empty_cache()
 
+                # mask gen: make new image here
+                ann_mask = Image.new("L", (width, height), 0)
+
                 # make coco dataset 
+                annotations_flag = False
                 for i in range(len(outputs["labels"])):
                     mask = outputs['masks'][i].numpy()
-                    annotations, area = self._mask_to_polygon(mask)
+                    anns, area = self._mask_to_polygon(mask)
+
+                    if not anns:
+                        continue
+
+                    if anns:
+                        annotations_flag = True
+
+                    # get mask from annotation
+                    # mask gen: comment out below line. adding a new drawn region to the existing ann mask, does this work?
+                    #ann_mask = Image.new("L", (width, height), 0)
+                    ImageDraw.Draw(ann_mask).polygon(anns[0], outline=255, fill=255)
+                    #np_mask = np.array(ann_mask)
+                    #print(np.unique(np_mask))
+                    #extracted_region = Image.composite(image, Image.new("RGB", image.size, (0, 0, 0)), ann_mask)
 
                     annotation = {
                         "id": annotation_id,
                         "image_id": image_id,
                         "category_id": int(outputs['labels'][i]),
-                        "segmentation": annotrations,
-                        "area": area,
+                        "segmentation": anns,
+                        "area": int(area),
                         "bbox":	outputs['boxes'][i].tolist(),
                         "iscrowd": False,
                         "isbbox": False,
@@ -150,27 +162,79 @@ class PseudoLabeller():
                         "keypoints": [],
                         "metadata": {}
                         }
-                    coco_data["annotations"].append(annotations)
+                    coco_data["annotations"].append(annotation)
                 
-                    del mask, annotations, area
+                    del mask, anns, area
                     torch.cuda.empty_cache()
-                    print(coco_data)
 
                     annotation_id += 1
+                
+                if annotations_flag:
+                    # mask gen: new gt image is generate from collected images
+                    new_gt_img = Image.composite(image, Image.new("RGB", image.size, (0, 0, 0)), ann_mask)
+                    #new_gt_img = Image.blend(image.convert("L"), ann_mask, alpha=0.5)
+                    #print("Number of non-zero pixels in ann_mask:", np.sum(np.array(ann_mask)))
 
+                    # mask gen: save the image below to a target directory along with modifications to the image data below
+                    # this is yet to be done. 
+                    pseudo_label_path = "data_handling/sources/pseudo_labels"
+                    new_gt_img.save(os.path.join(pseudo_label_path, filename))
+
+                    image.save("base_img.png")  # This will open the image using the default image viewer.
+                    ann_mask.save("masked_img.png")
+                    new_gt_img.save("maked_img.png")
+
+
+                    image_data = {
+                        "id": image_id,
+                        "dataset_id": 1,
+                        "path": self.data_path,
+                        "width": width,
+                        "height": height,
+                        "file_name": filename
+                        }
+                    coco_data["images"].append(image_data)
+                else:
+                    print("no anns")
+                
+                del image
                 torch.cuda.empty_cache()
                 
+                print(image_id)
                 image_id += 1
 
-    def _filter_predictions(self, predictions, threshold=0.5):
+                if (image_id - init_id) == 7000 or image_id == 10000 or image_id == 10025:
+                    # save labels 
+                    self._save_json(init_id, image_id, coco_data)
+
+                    # reset cocodata
+                    coco_data = {
+                        "images": [],
+                        "annotations": [],
+                        "categories": []
+                    }
+                    coco_data["categories"].append(category_data)
+
+                    # update init id
+                    init_id = image_id
+
+    def _filter_predictions(self, predictions, threshold=0.9):
         """ Filters the predicted masks to get the masks and meta data from the model """
-        masks = (predictions[0]["masks"] > threshold).float()
-        
+        # get filtered masks
+        masks = (predictions[0]["masks"] > 0.5).float()
+
+        valid_indices = torch.nonzero(predictions[0]["scores"] > threshold).squeeze(1)
+
+        masks = masks[valid_indices]
+        boxes = predictions[0]["boxes"][valid_indices]
+        labels = predictions[0]["labels"][valid_indices]
+        scores = predictions[0]["scores"][valid_indices]
+
         outputs = {
             "masks": masks.detach().cpu(),
-            "boxes": predictions[0]["boxes"].detach().cpu(),
-            "labels": predictions[0]["labels"].detach().cpu(),
-            "scores": predictions[0]["scores"].detach().cpu()
+            "boxes": boxes.detach().cpu(),
+            "labels": labels.detach().cpu(),
+            "scores": scores.detach().cpu()
         }
 
         return(outputs)
@@ -190,14 +254,30 @@ class PseudoLabeller():
         area = M.area(encoded_mask)
 
         # annotrations
+        proposals = []
         contours = measure.find_contours(mask)
         annotations = []
         for contour in contours:
             contour = np.flip(contour, axis=1)
             segmentation = contour.ravel().tolist(),
-            annotations.append(segmentation)
-        
+            proposals.append(segmentation[0])
+        #print("### Props ###")
+        #print(len(proposals))
+        try:
+            longest_proposal = max(proposals, key=len)
+            annotations.append(longest_proposal)
+        except ValueError:
+            annotations = None
+            area = None
         return annotations, area
+    
+    def _save_json(self, img_id, init_id, data):
+        """ Detials """
+        file_title = str(init_id) + "_" + str(img_id) + "_img_labels.json"
+        with open(file_title, "w") as file:
+            json.dump(data, file)
+
+
 
     
 

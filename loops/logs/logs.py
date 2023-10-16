@@ -76,7 +76,8 @@ class Logs():
             "rotnet_resnet_50": self._class_logs,
             "jigsaw": self._class_logs,
             "mask_rcnn": self._instance_seg_logs,
-            "rotmask_multi_task": self._multitask_logs
+            "rotmask_multi_task": self._multitask_logs,
+            "dual_mask_multi_task": self._multitask_logs2
         }
         return logs_mapper[self.model_name]()
     
@@ -103,7 +104,12 @@ class Logs():
                 "pre_best_val": [],
                 "pre_best_epoch": [],
                 "post_best_val": [],
-                "post_best_epoch": []
+                "post_best_epoch": [],
+                "post_best_map":[],
+                "post_best_map_epoch": [],
+                "pre_best_map": [],
+                "pre_best_map_epoch": [],
+                "map": [],
             }
         return logger
     
@@ -117,6 +123,30 @@ class Logs():
                 "val_loss": [],
                 "val_sup_loss": [],
                 "val_sup_ssl_loss": [],
+                "val_ssl_loss": [],
+                "epochs": [],
+                "pre_best_val": [],
+                "pre_best_epoch": [],
+                "post_best_val": [],
+                "post_best_epoch": [],
+                "post_best_map":[],
+                "post_best_map_epoch": [],
+                "pre_best_map": [],
+                "pre_best_map_epoch": [],
+                "map": [],
+                "iter_accume": 0,
+                "val_it_accume": 0
+            }
+        return logger
+
+    def _multitask_logs2(self):
+        if self.logs_type == "basic":
+            logger = {
+                "train_loss": [],
+                "train_sup_loss": [],
+                "train_ssl_loss": [],               
+                "val_loss": [],
+                "val_sup_loss": [],
                 "val_ssl_loss": [],
                 "epochs": [],
                 "pre_best_val": [],

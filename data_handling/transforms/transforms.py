@@ -19,7 +19,8 @@ class Transforms():
             "rotnet_resnet_50": self._rotnet_transforms,
             "jigsaw": self._jigsaw_transforms,
             "mask_rcnn": self._maskrcnn_tranforms,
-            "rotmask_multi_task": self._multitask_transforms
+            "rotmask_multi_task": self._multitask_transforms,
+            "dual_mask_multi_task": self._multitask_transforms
         }
         return transform_selector[self.model]()
     

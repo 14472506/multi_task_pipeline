@@ -33,6 +33,10 @@ class Losses():
             if self.cfg["params"]["awl"]:
                 return [self._instance_seg_loss, self._AWL(5)]
             return self._instance_seg_loss
+        if self.model_type == "dual_mask_multi_task":
+            if self.cfg["params"]["awl"]:
+                return [self._instance_seg_loss, self._AWL(5), self._AWL(5), self._AWL(2)]
+            return self._instance_seg_loss
 
     def _classifier_loss(self, target, pred):
         """ returns the loss for implemented classifier based tasks """

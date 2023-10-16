@@ -8,6 +8,7 @@ specified type.
 # imports
 # import base packages
 import random
+import copy
 
 # import third party packages
 import torch
@@ -61,6 +62,7 @@ class Loaders():
             "rotnet_resnet_50": RotNetDataset,
             "jigsaw": JigsawDataset,
             "mask_rcnn": COCODataset,
+            "dual_mask_multi_task": COCODataset,
             "rotmask_multi_task": [COCORotDataset, RotNetDataset],
         }
         self.dataset_class = dataset_selector[self.model_type]
@@ -73,7 +75,8 @@ class Loaders():
             "rotnet_resnet_50": self._classifier_loader,
             "jigsaw": self._classifier_loader,
             "mask_rcnn": self._instance_loader,
-            "rotmask_multi_task": self._multitask_loader
+            "rotmask_multi_task": self._multitask_loader,
+            "dual_mask_multi_task": self._dual_multitask_loader
         }
         if self.type == "train":
             train_loader, val_loader = loader_selector[self.model_type]()
@@ -165,6 +168,80 @@ class Loaders():
           
             
             return train_loader, val_loader 
+
+    def _dual_multitask_loader(self):
+        """ 
+        this method creates two coco data loaders for training the dual mask r-cnn semi supervised
+        model
+
+        Note, currently these are identical data loaders bar the source. ie same augs etc.
+        further modification may be needed in the future.
+        """
+        # copying dataloader config
+        sup_cfg = copy.deepcopy(self.cfg)
+        ssl_cfg = copy.deepcopy(self.cfg)
+
+        # creating cfg formats for coco dataset
+        sup_cfg["source"] = sup_cfg["source"][0]
+        sup_cfg["params"]["train"]["dir"] = sup_cfg["params"]["train"]["dir"][0]
+        sup_cfg["params"]["val"]["dir"] = sup_cfg["params"]["val"]["dir"][0]
+        sup_cfg["params"]["test"]["dir"] = sup_cfg["params"]["test"]["dir"][0]
+        sup_cfg["params"]["train"]["json"] = sup_cfg["params"]["train"]["json"][0]
+        sup_cfg["params"]["val"]["json"] = sup_cfg["params"]["val"]["json"][0]
+        sup_cfg["params"]["test"]["json"] = sup_cfg["params"]["test"]["json"][0]  
+
+        ssl_cfg["source"] = ssl_cfg["source"][1]
+        ssl_cfg["params"]["train"]["dir"] = ssl_cfg["params"]["train"]["dir"][1]
+        ssl_cfg["params"]["val"]["dir"] = ssl_cfg["params"]["val"]["dir"][1]
+        ssl_cfg["params"]["test"]["dir"] = ssl_cfg["params"]["test"]["dir"][1]
+        ssl_cfg["params"]["train"]["json"] = ssl_cfg["params"]["train"]["json"][1]
+        ssl_cfg["params"]["val"]["json"] = ssl_cfg["params"]["val"]["json"][1]
+        ssl_cfg["params"]["test"]["json"] = ssl_cfg["params"]["test"]["json"][1]
+
+        if self.type == "test":
+
+            sup_test_dataset = self.dataset_class(sup_cfg, "test")
+            ssl_test_dataset = self.dataset_class(ssl_cfg, "test")
+
+            if self.test_augs:
+                transforms = Transforms(self.cfg).transforms()
+                transforms_wrapper = wrappers(self.model_type)
+                sup_test_dataset = transforms_wrapper(sup_test_dataset, transforms)
+                ssl_test_dataset = transforms_wrapper(ssl_test_dataset, transforms)
+                print("test augs applied")
+            
+            sup_test_loader = self._create_dataloader(sup_test_dataset, self.test_bs[0], self.test_shuffle, self.test_workers, COCO_collate_function)
+            ssl_test_loader = self._create_dataloader(ssl_test_dataset, self.test_bs[1], self.test_shuffle, self.test_workers, COCO_collate_function)
+            return [sup_test_loader, ssl_test_loader]
+        
+        if self.type == "train":
+
+            sup_train_dataset = self.dataset_class(sup_cfg, "train")
+            sup_val_dataset = self.dataset_class(sup_cfg, "val")
+            ssl_train_dataset = self.dataset_class(ssl_cfg, "train")
+            ssl_val_dataset = self.dataset_class(ssl_cfg, "val")
+
+            if self.train_augs:
+                train_transforms = Transforms(self.cfg).transforms()
+                train_transforms_wrapper = wrappers(self.model_type)
+                sup_train_dataset = train_transforms_wrapper(sup_train_dataset, train_transforms)
+                ssl_train_dataset = train_transforms_wrapper(ssl_train_dataset, train_transforms)
+                print("train augs applied")
+
+            if self.val_augs:
+                val_transforms = Transforms(self.cfg).transforms()
+                val_transforms_wrapper = wrappers(self.model_type)
+                sup_val_dataset = val_transforms_wrapper(sup_val_dataset, val_transforms)
+                ssl_val_dataset = val_transforms_wrapper(ssl_val_dataset, val_transforms)
+                print("train augs applied")
+
+            sup_train_loader = self._create_dataloader(sup_train_dataset, self.train_bs[0], self.train_shuffle, self.train_workers, COCO_collate_function)           
+            sup_val_loader = self._create_dataloader(sup_val_dataset, self.val_bs[0], self.val_shuffle, self.val_workers, COCO_collate_function)
+            ssl_train_loader = self._create_dataloader(ssl_train_dataset, self.train_bs[1], self.train_shuffle, self.train_workers, COCO_collate_function)           
+            ssl_val_loader = self._create_dataloader(ssl_val_dataset, self.val_bs[1], self.val_shuffle, self.val_workers, COCO_collate_function)
+          
+            
+            return [sup_train_loader, ssl_train_loader], [sup_val_loader, ssl_val_loader]  
         
     def _multitask_loader(self):
         """ creates a dataloader for the multi task instance segmentation and classifier based models """
