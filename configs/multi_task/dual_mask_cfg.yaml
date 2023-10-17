@@ -4,15 +4,15 @@ meta_data:
 
 defaults: 
   model_name: &model_name dual_mask_multi_task
-  step: &step 100
+  step: &step 200
   num_rotations: &num_rotations 4
   seed: &seed 42
 
 loops:
-  device: "cuda:0"
+  device: "cuda:1"
   grad_acc: [1, 1]
   start: 0
-  end: 130
+  end: 230
   seed: *seed
 
 logs:
