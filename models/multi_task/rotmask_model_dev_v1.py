@@ -6,14 +6,13 @@ Module Detial:
 """
 # imports
 # base packages
-import warnings
-from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
 
 # third party packages
 import torch
 import torch.nn as nn
 import torchvision
+from torchvision.models.detection import maskrcnn_resnet50_fpn
+from torchvision.models.detection.roi_heads import RoIHeads
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
@@ -57,13 +56,6 @@ class RotNetHead(torch.nn.Module):
         x = self.fc_layers(x)
         x = self.classifier(x)
         return x
-    
-    @torch.jit.unused
-    def eager_outputs(self, losses, detections, rot_pred):
-        if self.training:
-            return losses, rot_pred
-
-        return detections
 
 class RotMaskRCNN(torchvision.models.detection.MaskRCNN):
     def __init__(self, backbone=None, num_classes=91, num_rots=4, batch_norm=True, drop_out=0.5, **kwargs):
@@ -77,90 +69,22 @@ class RotMaskRCNN(torchvision.models.detection.MaskRCNN):
         # this be? <<< try this later, for now, backbone to classifier head. 
         self.self_supervised_head = RotNetHead(num_rots, batch_norm, drop_out)
 
-    def forward(self, images, targets=None):
-        """
-        Args:
-            images (list[Tensor]): images to be processed
-            targets (list[Dict[str, Tensor]]): ground-truth boxes present in the image (optional)
-
-        Returns:
-            result (list[BoxList] or dict[Tensor]): the output from the model.
-                During training, it returns a dict[Tensor] which contains the losses.
-                During testing, it returns list[BoxList] contains additional fields
-                like `scores`, `labels` and `mask` (for Mask R-CNN models).
-
-        """
-        if self.training:
-            if targets is None:
-                
-                # Handling just RotNet for SSL applications
-                features = self.backbone(images.tensors)
-                in_features = features["3"]          
-                x = self.self_supervised_head(in_features)
-                return x
-
-            else:
-                for target in targets:
-                    boxes = target["boxes"]
-                    if isinstance(boxes, torch.Tensor):
-                        torch._assert(
-                            len(boxes.shape) == 2 and boxes.shape[-1] == 4,
-                            f"Expected target boxes to be a tensor of shape [N, 4], got {boxes.shape}.",
-                        )
-                    else:
-                        torch._assert(False, f"Expected target boxes to be of type Tensor, got {type(boxes)}.")
-
-        original_image_sizes: List[Tuple[int, int]] = []
-        for img in images:
-            val = img.shape[-2:]
-            torch._assert(
-                len(val) == 2,
-                f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
-            )
-            original_image_sizes.append((val[0], val[1]))
-
-        images, targets = self.transform(images, targets)
-
-        # Check for degenerate boxes
-        # TODO: Move this to a function
-        if targets is not None:
-            for target_idx, target in enumerate(targets):
-                boxes = target["boxes"]
-                degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
-                if degenerate_boxes.any():
-                    # print the first degenerate box
-                    bb_idx = torch.where(degenerate_boxes.any(dim=1))[0][0]
-                    degen_bb: List[float] = boxes[bb_idx].tolist()
-                    torch._assert(
-                        False,
-                        "All bounding boxes should have positive height and width."
-                        f" Found invalid box {degen_bb} for target at index {target_idx}.",
-                    )
-
-        features = self.backbone(images.tensors)
+    def forward(self, images, targets=None, mode='segm'):
+        if mode == 'segm':
+            # carry out normal forward as MRCNN
+            return super().forward(images, targets)
         
-        # Handling RotNet for multi task execution
-        rot_features = features["3"]
-        rot_pred = self.self_supervised_head(rot_features)   
+        elif mode == 'ssl':
+            # In 'rotnet' mode, we use only the RotNet head
+            #features = self.backbone(images.tensors if isinstance(images, ImageList) else images)
+            features = self.backbone.body(images)
+            # select output to pass into model. This may need to change when tested
+            in_features = features["3"]
+            # classifier head
+            x = self.self_supervised_head(in_features)
 
-        if isinstance(features, torch.Tensor):
-            features = OrderedDict([("0", features)])
-        proposals, proposal_losses = self.rpn(images, features, targets)
-        detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
-        detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)  # type: ignore[operator]
-
-        losses = {}
-        losses.update(detector_losses)
-        losses.update(proposal_losses)
-
-        if torch.jit.is_scripting():
-            if not self._has_warned:
-                warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
-                self._has_warned = True
-            return losses, detections
-        else:
-            return self.eager_outputs(losses, detections, rot_pred)
-                          
+            return x
+                  
 # model init may need to go here too, how does the MRCNN or faster RCNN class do this?
 def rotmask_resnet50_fpn(cfg):
                          

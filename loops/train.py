@@ -51,7 +51,7 @@ class Train():
 
     def train(self):
         """ Executes the main training loop based off the config dictionary """
-        self._before_loop(self.model, self.cfg)
+        self._before_loop(self.model, self.optimiser)
         
         for epoch in range(self.start, self.end):
             
