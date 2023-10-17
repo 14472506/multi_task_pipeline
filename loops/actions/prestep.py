@@ -2,6 +2,7 @@
 Detials
 """
 # imports
+import torch
 
 # class
 class PreStep():
@@ -41,6 +42,7 @@ class PreStep():
     
     def _multitask_action(self, epoch):
         """ Detials """
+
         banner = "--------------------------------------------------------------------------------"
         title = "Epoch: " + str(epoch)
 

@@ -22,7 +22,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "dual_mask_data_multi_awl" 
+  exp_dir: "dualmask_masked_awl_89_230" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -30,6 +30,7 @@ logs:
 
 model:
   model_name: *model_name
+  load_model: true
   params:
     backbone_type: pre-trained
     drop_out: 0.5
@@ -39,6 +40,7 @@ model:
     hidden_layers: 256
     min_size: 800
     max_size: 1333
+    load_path: outputs/models/dual_mask_data_multi_awl/model_0/pre_best.pth
 
 dataset:
   source: [data_handling/sources/jersey_dataset_v4, data_handling/sources/pseudo_labels]

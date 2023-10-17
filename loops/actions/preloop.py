@@ -2,6 +2,7 @@
 Detials
 """
 # imports
+import torch
 
 # class
 class PreLoop():
@@ -10,6 +11,9 @@ class PreLoop():
         """ Detials """
         self.cfg = cfg
         self.model_name = self.cfg["model_name"]
+        self.load_model = self.cfg["load_model"]
+        if self.load_model:
+            self.load_path = self.cfg["params"]["load_path"]
     
     def action(self):
         self.action_map = {
@@ -41,8 +45,20 @@ class PreLoop():
         print(title)
         print(banner)
     
-    def _multitask_action(self, model, cfg):
+    def _multitask_action(self, model, optimiser):
         """ Detials """
+
+        if self.load_model:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            checkpoint = torch.load(self.load_path)
+            model.load_state_dict(checkpoint["state_dict"])
+            optimiser.load_state_dict(checkpoint['optimizer'])
+
+            for state in optimiser.state.values():
+                for k, v in state.items():
+                    if isinstance(v, torch.Tensor):
+                        state[k] = v.to(device)
+
         banner = "================================================================================"
         title = " Multi Task Training "
 
