@@ -60,6 +60,9 @@ class Optimisers():
 
         if self.model_name == "rotmask_multi_task":
             self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}, {"params": self.loss[0].parameters()}]
+        
+        if self.model_name == "jigmask_multi_task":
+            self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}, {"params": self.loss[0].parameters()}]
 
         if self.model_name == "dual_mask_multi_task":
             if isinstance(self.loss, list):

@@ -28,7 +28,9 @@ class Losses():
         if self.model_type == "jigsaw": 
             return self._classifier_loss
         if self.model_type == "rotmask_multi_task": 
-            return [self._AWL(7), self._classifier_loss]
+            return [self._AWL(2), self._classifier_loss]
+        if self.model_type == "jigmask_multi_task": 
+            return [self._AWL(6), self._classifier_loss]
         if self.model_type == "mask_rcnn":
             if self.cfg["params"]["awl"]:
                 return [self._instance_seg_loss, self._AWL(5)]
@@ -42,7 +44,7 @@ class Losses():
         """ returns the loss for implemented classifier based tasks """
         loss = F.cross_entropy(target, pred)
         return loss
-    
+        
     def _instance_seg_loss(self):
         """ returns null for now """
         loss = None

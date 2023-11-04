@@ -19,6 +19,7 @@ from .datasets.jigsaw import JigsawDataset
 from .datasets.rotnet import RotNetDataset
 from .datasets.coco import COCODataset
 from .datasets.coco_rotnet import COCORotDataset, COCO_collate_function
+from .datasets.coco_jigsaw import COCOJigsawDataset
 from .transforms.transforms import Transforms
 from .transforms.transform_wrapper import wrappers
 
@@ -64,6 +65,7 @@ class Loaders():
             "mask_rcnn": COCODataset,
             "dual_mask_multi_task": COCODataset,
             "rotmask_multi_task": [COCORotDataset, RotNetDataset],
+            "jigmask_multi_task": [COCOJigsawDataset, JigsawDataset]
         }
         self.dataset_class = dataset_selector[self.model_type]
     
@@ -76,6 +78,7 @@ class Loaders():
             "jigsaw": self._classifier_loader,
             "mask_rcnn": self._instance_loader,
             "rotmask_multi_task": self._multitask_loader,
+            "jigmask_multi_task": self._multitask_loader,
             "dual_mask_multi_task": self._dual_multitask_loader
         }
         if self.type == "train":
@@ -253,16 +256,16 @@ class Loaders():
         mod_cfg["model_name"] = self.cfg["sub_mod_name"]
         
         # get dataset classes
-        rotmask_dataset_class = self.dataset_class[0]
-        rotnet_class = self.dataset_class[1]
+        combined_dataset_class = self.dataset_class[0]
+        sup_class = self.dataset_class[1]
 
         # get all ssl data
-        all_ssl_data = rotnet_class(mod_cfg, self.cfg["random_seed"])
+        all_ssl_data = sup_class(mod_cfg, self.cfg["random_seed"])
         splits = self._data_split(all_ssl_data)
 
         if self.type == "test":
 
-            sup_test_dataset = rotmask_dataset_class(self.cfg, "test")
+            sup_test_dataset = combined_dataset_class(self.cfg, "test")
             ssl_test_dataset = splits[0]
 
             if self.test_augs:
@@ -281,8 +284,8 @@ class Loaders():
         
         if self.type == "train":
 
-            sup_train_dataset = rotmask_dataset_class(self.cfg, "train")
-            sup_val_dataset = rotmask_dataset_class(self.cfg, "val")
+            sup_train_dataset = combined_dataset_class(self.cfg, "train")
+            sup_val_dataset = combined_dataset_class(self.cfg, "val")
             ssl_train_dataset = splits[0]
             ssl_val_dataset = splits[1]
 

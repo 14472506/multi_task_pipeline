@@ -23,7 +23,8 @@ class TestAction():
             "rotnet_resnet_50": self._classifier_action,
             "jigsaw": self._classifier_action,
             "mask_rcnn": self._instance_seg_action,
-            "rotmask_multi_task": self._multitask_action,   
+            "rotmask_multi_task": self._multitask_action, 
+            "jigmask_multi_task": self._multitask_action,  
             "dual_mask_multi_task": self._multitask_action2
         }
         return self.action_map[self.model_name]
@@ -93,12 +94,12 @@ class TestAction():
             model.eval()
 
             for i, data in enumerate(loader):
-                input, target, _, _ = data
+                input, target, _ = data
                 input = list(image.to(device) for image in input)
         
                 with torch.autocast("cuda"):
                     with torch.no_grad():
-                        predictions = model(input, mode="segm")
+                        predictions = model(input)
 
                 masks_in = predictions[0]["masks"].cpu().detach()
                 masks_in = masks_in > 0.5

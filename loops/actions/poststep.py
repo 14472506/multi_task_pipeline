@@ -18,6 +18,7 @@ class PostStep():
             "jigsaw": self._classifier_action,
             "mask_rcnn": self._instance_seg_action,
             "rotmask_multi_task": self._multitask_action,
+            "jigmask_multi_task": self._multitask_action,
             "dual_mask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]

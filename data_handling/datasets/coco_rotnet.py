@@ -39,18 +39,28 @@ class COCORotDataset(data.Dataset):
 
     def __getitem__(self, idx):
         """Details"""
-        # laoding image
+        # laoding image and related coco data
         img_id = self.ids[idx]
         file_name = self.coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(self.dir, file_name)).convert('RGB')
 
-        mrcnn_target = self._coco_target_collection(img_id, idx)
-        mrcnn_tensor = self._to_tensor(img)
-        rot_tensor, rot_target = self._generate_rotnet_data(img)
+        # generate rotation anlge theta
+        theta = np.random.choice(self.rot_deg, size=1)[0]
 
-        return mrcnn_tensor, mrcnn_target, rot_tensor, rot_target
+        # rotate image
+        image_tensor = self._to_tensor(img)
+        image_tensor = self._rotate_tensor(image_tensor, theta)
 
-    def _coco_target_collection(self, img_id, idx):
+        # get mrcnn targets
+        mrcnn_target = self._coco_target_collection(img_id, theta, idx)
+
+        # get rotnet target
+        rot_target = torch.zeros(self.num_rotations)
+        rot_target[self.rot_deg.index(theta)] = 1
+
+        return image_tensor, mrcnn_target, rot_target
+
+    def _coco_target_collection(self, img_id, theta, idx):
         """Detials"""
         # collecting ids and annotations
         ann_ids = self.coco.getAnnIds(imgIds=img_id)
@@ -77,53 +87,127 @@ class COCORotDataset(data.Dataset):
             mask == ann['category_id']
             masks_list.append(torch.from_numpy(mask)) 
 
+        masks = torch.stack(masks_list, 0)  
+        rotated_masks = self._rotate_tensor(masks, theta)  
+        rotated_boxes = self._rotate_boxes(boxes, rotated_masks.shape, theta)
+        rotated_boxes = torch.as_tensor(rotated_boxes, dtype=torch.float32)
+
         # building target_dict
-        target["boxes"] = torch.as_tensor(boxes, dtype=torch.float32)
+        target["boxes"] = rotated_boxes
         target["labels"] = torch.as_tensor(labels, dtype=torch.int64)
-        target["masks"] = torch.stack(masks_list, 0)
+        target["masks"] = rotated_masks
         target["image_id"] = torch.tensor([idx])
         target["area"] = torch.as_tensor(areas, dtype=torch.int64)
         target["iscrowd"] = torch.as_tensor(iscrowds, dtype=torch.int64)
 
         return(target)
-
-    def _generate_rotnet_data(self, img):
-        """Detials"""
-        # shape and resize image
-        rot_img = self._basic_square_crop(img)
-        rot_img = self._resize(rot_img)
-        image_tensor = self._to_tensor(rot_img)
-
-        # generate rotation angle
-        theta = np.random.choice(self.rot_deg, size=1)[0]
-        rotated_image_tensor = self.rotate_image(image_tensor.unsqueeze(0), theta).squeeze(0)
-
-        # produce label
-        target = torch.zeros(self.num_rotations)
-        target[self.rot_deg.index(theta)] = 1
-
-        return rotated_image_tensor, target
     
-    def rotate_image(self, image_tensor, theta):
+    def _rotate_tensor(self, tensor, theta):
         """
         Detials
         """
+        if theta == 0:
+            return tensor
+        
+        # swap indicates weather height and width should be swapped when handling tensor rotation
+        if theta in [90, 270]:
+            swap = True
+        else:
+            swap = False
+
         # get tensor image data type
-        dtype = image_tensor.dtype
+        dtype = tensor.dtype
         theta *= np.pi/180
         theta = torch.tensor(theta)
 
+        if dtype == torch.uint8:
+            tensor = tensor.float()
+            dtype = tensor.dtype
+            mask_flag = True
+        else:
+            mask_flag = False
+
+        tensor = tensor.unsqueeze(0)
         rotation_matrix = torch.tensor([[torch.cos(theta), -torch.sin(theta), 0],
                                         [torch.sin(theta), torch.cos(theta), 0]])
-        rotation_matrix = rotation_matrix[None, ...].type(dtype).repeat(image_tensor.shape[0], 1, 1)
-        
+        rotation_matrix = rotation_matrix[None, ...].type(dtype).repeat(tensor.shape[0], 1, 1)
+
+        # this code handles the input the the affine_grid function for correctly carrying out the rotation
+        H, W = tensor.shape[-2], tensor.shape[-1]
+        if swap:
+            H, W = W, H
+        tensor_shape = [tensor.shape[0], tensor.shape[1], H, W]
         grid = F.affine_grid(rotation_matrix,
-                                     image_tensor.shape,
+                                     tensor_shape,
                                      align_corners=True).type(dtype)
-        rotated_torch_image = F.grid_sample(image_tensor, grid, align_corners=True)
+        rotated_tensor = F.grid_sample(tensor, grid, align_corners=True)
+        rotated_tensor = rotated_tensor.squeeze(0)
+
+        if mask_flag:
+            rotated_tensor = (rotated_tensor > 0.5).byte()
 
         # returning rotated image tensor
-        return rotated_torch_image
+        return rotated_tensor
+    
+    def _rotate_boxes(self, boxes, mask_shape, theta):
+        """
+        Detials
+        """
+        # return bounding boxes as if no rotation needs to be applied
+        if theta == 0:
+            return boxes
+    
+        H, W = mask_shape[-2], mask_shape[-1]
+        swap_dims = theta in [90, 270]
+        if swap_dims:
+            W, H = H, W
+        cx, cy = W / 2, H / 2  # Image center
+
+        rotated_boxes = []
+        for box in boxes:
+            xmin, ymin, xmax, ymax = box
+            xmin -= cx
+            xmax -= cx
+            ymin -= cy
+            ymax -= cy
+        
+            # Define rotation matrix for counter-clockwise rotation
+            angle = np.deg2rad(theta)
+            rotation_matrix = np.array([
+                [np.cos(angle), -np.sin(angle)],
+                [np.sin(angle), np.cos(angle)]
+            ])
+
+            # Rotate the corners of the bounding box
+            corners = np.array([
+                [xmin, ymin],
+                [xmax, ymin],
+                [xmax, ymax],
+                [xmin, ymax]
+            ])
+
+            rotated_corners = corners.dot(rotation_matrix)
+
+            # Find min/max to get the rotated bounding box
+            xmin_new, ymin_new = rotated_corners.min(axis=0)
+            xmax_new, ymax_new = rotated_corners.max(axis=0)
+
+            if swap_dims:
+                xmin_new += cy
+                xmax_new += cy
+                ymin_new += cx
+                ymax_new += cx
+            else:
+                xmin_new += cx
+                xmax_new += cx
+                ymin_new += cy
+                ymax_new += cy
+
+            new_box = [xmin_new, ymin_new, xmax_new, ymax_new]
+            rotated_boxes.append(new_box)
+    
+        #return rotated_boxes
+        return(rotated_boxes)
 
     def _to_tensor(self, img):
         transform = T.ToTensor()
@@ -132,28 +216,7 @@ class COCORotDataset(data.Dataset):
     
     def __len__(self):
         return len(self.ids)
-    
-    def _basic_square_crop(self, img):
-        """ Detials """
-
-        width, height = img.size
-        centre_width = width/2
-        centre_height = height/2
-        max_size = min(width, height)
-        half_max = max_size/2
-        left = centre_width - half_max
-        right = centre_width + half_max
-        top = centre_height - half_max
-        bottom = centre_height + half_max
-        cropped_img = img.crop((left, top, right, bottom))
-
-        return cropped_img
-    
-    def _resize(self, img, size=500):
-        """ Detials """
-        resized_img = img.resize((size, size))
-        return(resized_img)
-  
+      
 def COCO_collate_function(batch):
     """Detials"""
-    return tuple(zip(*batch)) 
+    return tuple(zip(*batch))
