@@ -14,8 +14,11 @@ from typing import Dict, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 import torchvision
+from torch import Tensor
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torchvision.models.detection.transform import GeneralizedRCNNTransform
+from torchvision.models.detection.image_list import ImageList
 
 # local packages
 
@@ -50,8 +53,9 @@ class JigsawHead(torch.nn.Module):
         x = self.classifier(x)
         return x
     
+
 class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
-    def __init__(self, backbone=None, num_classes=91, num_tiles=9, num_permutations=100, batch_norm=True, drop_out=0.5, **kwargs):
+    def __init__(self, backbone=None, num_classes=91, num_tiles=9, num_permutations=100, tile_min=266, tile_max=444, **kwargs):
         # >>> potential further definitions here
         super().__init__(backbone=backbone, num_classes=num_classes, **kwargs)
         # above may need significantly more configuration, actually might be better
@@ -66,10 +70,22 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
         self.jig_fc_layers = nn.Sequential(nn.Linear(2048, 1000, bias=False))
         self.self_supervised_head = JigsawHead(num_tiles, num_permutations)
 
+        image_mean = [0.485, 0.456, 0.406]
+        image_std = [0.229, 0.224, 0.225]
+
+        self.tile_transform = GeneralizedRCNNTransform(tile_min, tile_max, image_mean, image_std)
+
+
     def forward(self, images=None, targets=None):
         """
         Args:
-            images (list[Tensor]): images to be processed
+            images (list[Tensor]): image
+                    ext_inputs = {
+                        "tile_imgs": [],
+                        "tile_masks": [],
+                        "tile_boxes": [],
+                        "tile_labels": [],
+                    }s to be processed
             targets (list[Dict[str, Tensor]]): ground-truth boxes present in the image (optional)
 
         Returns:
@@ -80,99 +96,146 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
 
         """
         if self.training:
-            if images.shape(1) == self.num_tiles:
-                if targets is None:
-                    # How to make this a method? does it need to be?
-                    feature_stack = []
-                    for i in range(self.num_tiles):
-                        part_features = self.backbone.body(images[:, i, :, :, :])
-                        part_features = self.jig_avg_pooling(part_features["3"])
-                        part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
-                        feature_stack.append(part_features)
-                    jig_features = torch.stack(feature_stack) 
-                    jig_pred = self.self_supervised_head(jig_features)
-                    return jig_pred
-                
-                else:
-                    for image, target in zip(images, targets):
+            # if dimension is 4 and first dimension is the same as the number of tiles then it shoulds be a tile image and needs to be unsqueezer
+            if images.dim() == 4:
+                if images.shape[0] == self.num_tiles:
+                    images = images.unsqueeze(0)
+
+            # if an images an standard images and is of batch size one it must be unsqueezed to be processed in the following code
+            if images.dim() == 3:
+                images = images.unsqueeze(0)
+
+            jig_pred_list = []
+            acc_losses = {
+                "loss_classifier": 0,
+                "loss_box_reg": 0,
+                "loss_mask": 0,
+                "loss_objectness": 0,
+                "loss_rpn_box_reg": 0
+            }
+            acc_loss_count = 0
+
+            # images will be of 5 dimensions with the first being of the batch size. this must be iterated through
+            for batch_idx in range(images.shape[0]):
+                # select the image for the batch index
+                image = images[batch_idx]
+                # if images is tiled image.
+                if image.shape[0] == self.num_tiles:
+                    if targets is None:
+                        # How to make this a method? does it need to be?
+                        feature_stack = []
                         for i in range(self.num_tiles):
-                            tile_im = image[:, i, :, :, :]
-                            tile_mask = target["masks"]
-            # #################################################################################
-            # summat summat summat
-            # #################################################################################            
-            else:
-                for target in targets:
-                    boxes = target["boxes"]
-                    if isinstance(boxes, torch.Tensor):
-                        torch._assert(
-                            len(boxes.shape) == 2 and boxes.shape[-1] == 4,
-                            f"Expected target boxes to be a tensor of shape [N, 4], got {boxes.shape}.",
-                        )
+                            img = [image[i]]
+                            img, _ = self.tile_transform(img)
+                            part_features = self.backbone.body(img.tensors)                            
+                            part_features = self.jig_avg_pooling(part_features["3"])
+                            part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
+                            feature_stack.append(part_features)
+                        jig_features = torch.stack(feature_stack) 
+                        jig_pred = self.self_supervised_head(jig_features)
+                        jig_pred_list.append(jig_pred)
+                
                     else:
-                        torch._assert(False, f"Expected target boxes to be of type Tensor, got {type(boxes)}.")
+                        image = [image]
+                        ext_inputs = self._tile_processing(image, targets)
+                        feature_stack = []
+                        count = 0
+                        print(ext_inputs["tile_idx"])
+                        for i in range(self.num_tiles):
+                            if i in ext_inputs["tile_idx"]:
+                                img = [image[0][i]]
+      
+                                targets[0]["masks"] = ext_inputs["tile_masks"][count]
+                                targets[0]["boxes"] = ext_inputs["tile_boxes"][count]
+                                targets[0]["labels"] = ext_inputs["tile_labels"][count]
 
-        original_image_sizes: List[Tuple[int, int]] = []
-        for img in images:
-            val = img.shape[-2:]
-            torch._assert(
-                len(val) == 2,
-                f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
-            )
-            original_image_sizes.append((val[0], val[1]))
+                                img, targets = self.tile_transform(img, targets)
+                        
+                                part_features = self.backbone.body(img.tensors)
+                                features = self.backbone.fpn(part_features)
 
-        images, targets = self.transform(images, targets)
+                                part_features = self.jig_avg_pooling(part_features["3"])
+                                part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
+                                feature_stack.append(part_features)
 
-        # Check for degenerate boxes
-        # TODO: Move this to a function
-        if targets is not None:
-            for target_idx, target in enumerate(targets):
-                boxes = target["boxes"]
-                degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
-                if degenerate_boxes.any():
-                    # print the first degenerate box
-                    bb_idx = torch.where(degenerate_boxes.any(dim=1))[0][0]
-                    degen_bb: List[float] = boxes[bb_idx].tolist()
-                    torch._assert(
-                        False,
-                        "All bounding boxes should have positive height and width."
-                        f" Found invalid box {degen_bb} for target at index {target_idx}.",
-                    )
-        
-        # Mask R-CNN Features backbone and fpn
-        features = self.backbone(images.tensors)
-        # Handling Jigsaw for multi task execution
-        feature_stack = []
-        for i in range(self.num_tiles):
-            part_features = self.backbone.body(im_stack[i])
-            part_features = self.jig_avg_pooling(part_features["3"])
-            part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
-            feature_stack.append(part_features)
-        jig_features = torch.stack(feature_stack)    
-        jig_pred = self.self_supervised_head(jig_features)
- 
-        if isinstance(features, torch.Tensor):
-            features = OrderedDict([("0", features)])
-        proposals, proposal_losses = self.rpn(images, features, targets)
-        detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
-        detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)  # type: ignore[operator]
+                                if isinstance(features, torch.Tensor):
+                                    features = OrderedDict([("0", features)])
 
-        losses = {}
-        losses.update(detector_losses)
-        losses.update(proposal_losses)
+                                proposals, proposal_losses = self.rpn(img, features, targets)
 
-        #if torch.jit.is_scripting():
-        #    if not self._has_warned:
-        #        warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
-        #        self._has_warned = True
-        #    return losses, detections
-        #else:
-        #    return self.eager_outputs(losses, detections, rot_pred)
-        if self.training:
-            return losses, jig_pred
+                                detections, detector_losses = self.roi_heads(features, proposals, img.image_sizes, targets)
 
-        return detections
-                          
+                                losses = {}
+                                losses.update(detector_losses)
+                                losses.update(proposal_losses)
+
+                                for key in acc_losses.keys():
+                                    acc_losses[key] += losses.get(key, 0)
+                                acc_loss_count += 1
+                                count += 1
+
+                            else:
+                                img = [image[0][i]]
+                                img, _ = self.tile_transform(img)
+                                part_features = self.backbone.body(img.tensors)                            
+                                part_features = self.jig_avg_pooling(part_features["3"])
+                                part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
+                                feature_stack.append(part_features)                                  
+                        jig_features = torch.stack(feature_stack)    
+                        jig_pred = self.self_supervised_head(jig_features)
+                        jig_pred_list.append(jig_pred)
+
+                else:
+                    # this is to carry out convetional mrcnn
+                    pass
+            
+            jig_pred_tensor = torch.stack(jig_pred_list)
+            jig_pred_tensor = jig_pred_tensor.squeeze(1)
+            if targets is None:
+                return jig_pred_tensor
+            else:
+                print(acc_loss_count)
+                for key in acc_losses.keys():
+                    acc_losses[key] /= acc_loss_count
+                return acc_losses, jig_pred_tensor
+
+
+    def _tile_processing(self, images, targets):
+        """ Detials """
+        ext_inputs = {
+            "tile_idx": [],
+            "tile_masks": [],
+            "tile_boxes": [],
+            "tile_labels": [],
+        }
+
+        device = images[0].device
+
+        for image, target in zip(images, targets):
+            for tile_id in range(image.shape[0]):
+                if target["labels"][:, tile_id].sum() > 0:
+
+                    tile_masks = []
+                    tile_boxes = []
+                    tile_labels = []
+
+                    masks_idx = (target["labels"][:, tile_id].nonzero(as_tuple=True)[0]).tolist()
+                    for mask_idx in masks_idx:
+                        tile_masks.append(target["masks"][tile_id, mask_idx])
+                        tile_boxes.append(target["boxes"][mask_idx])
+                        tile_labels.append(target["labels"][mask_idx, tile_id].item())
+
+                    tile_masks = torch.stack(tile_masks)
+                    tile_boxes = torch.stack(tile_boxes)
+                    tile_labels = torch.tensor(tile_labels)
+
+                    ext_inputs["tile_idx"].append(tile_id)
+                    ext_inputs["tile_masks"].append(tile_masks)
+                    ext_inputs["tile_boxes"].append(tile_boxes)
+                    ext_inputs["tile_labels"].append(tile_labels.to(device))
+
+        return ext_inputs
+
 # model init may need to go here too, how does the MRCNN or faster RCNN class do this?
 def jigmask_resnet50_fpn(cfg):
                          
@@ -187,6 +250,8 @@ def jigmask_resnet50_fpn(cfg):
     hidden_layers = cfg["params"]["hidden_layers"]
     min_size = cfg["params"]["min_size"]
     max_size = cfg["params"]["max_size"]
+    tile_min = min_size // 3
+    tile_max = max_size // 3
 
     # backbone selecting
     if backbone_type == "pre-trained":
@@ -203,7 +268,7 @@ def jigmask_resnet50_fpn(cfg):
     if drop_out:
         backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
 
-    model = JigMaskRCNN(backbone, num_classes, num_tiles, num_permutations, batch_norm, drop_out, max_size=max_size, min_size=min_size)
+    model = JigMaskRCNN(backbone, num_classes, num_tiles, num_permutations, tile_max=tile_max, tile_minx=tile_min, max_size=max_size, min_size=min_size)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels

@@ -120,6 +120,9 @@ class COCOJigsawDataset(data.Dataset):
 
         perm_masks, perm_boxes, perm_labels = self._perm_corrector(targets_stack)
 
+        #perm_masks = perm_masks.permute(1, 0, 2, 3)
+        #img_stack = img_stack.permute(1, 0, 2, 3)
+
         # add updated instances anns to target data
         instance_targets["masks"] = perm_masks
         instance_targets["boxes"] = perm_boxes

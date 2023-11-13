@@ -281,8 +281,6 @@ class Step():
                 sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
                 sup_ssl_target = sup_ssl_target[0].to(device)
 
-                print(sup_im.shape)
-
                 #sup_im, sup_ssl_im, sup_target, sup_ssl_target = next(sup_iter)
 
                 #sup_im = list(image.to(device) for image in sup_im)
@@ -312,7 +310,7 @@ class Step():
                         ssl_target = ssl_target.to(device)
 
                         # forward pass
-                        ssl_output = model.forward(None, ssl_im, None)
+                        ssl_output = model.forward(ssl_im)
                         ssl_loss = loss(ssl_target, ssl_output)
 
                         ssl_loss += ssl_loss.div_(secondar_grad * primary_grad)
