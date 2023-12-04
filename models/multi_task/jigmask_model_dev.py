@@ -55,6 +55,11 @@ class JigsawHead(torch.nn.Module):
     
 
 class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
+    """
+    JigMask is built of torch visions implemenetation of mask-rcnn, the class adds the jigrot 
+    classification head alone with a modified forward to allow the tiles to be processed for both
+    images and masks, along with the jigsaw classification
+    """
     def __init__(self, backbone=None, num_classes=91, num_tiles=9, num_permutations=100, tile_min=266, tile_max=444, **kwargs):
         # >>> potential further definitions here
         super().__init__(backbone=backbone, num_classes=num_classes, **kwargs)
@@ -62,8 +67,6 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
         # to include this anyway, then this can be place in the config for further
         # optimisation. for no provide just essential parts
 
-        # aditional classifier head defined. not to be passed into roi, or should 
-        # this be? <<< try this later, for now, backbone to classifier head. 
         self.num_tiles = num_tiles
 
         self.jig_avg_pooling = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)))
@@ -95,6 +98,7 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
                 like `scores`, `labels` and `mask` (for Mask R-CNN models).
 
         """
+        # code for training execution
         if self.training:
             # if dimension is 4 and first dimension is the same as the number of tiles then it shoulds be a tile image and needs to be unsqueezer
             if images.dim() == 4:
@@ -105,6 +109,7 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
             if images.dim() == 3:
                 images = images.unsqueeze(0)
 
+            # init data collection for tiles
             jig_pred_list = []
             acc_losses = {
                 "loss_classifier": 0,
@@ -113,6 +118,8 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
                 "loss_objectness": 0,
                 "loss_rpn_box_reg": 0
             }
+
+            # init acc loss count for tiles
             acc_loss_count = 0
 
             # images will be of 5 dimensions with the first being of the batch size. this must be iterated through
@@ -122,7 +129,7 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
                 # if images is tiled image.
                 if image.shape[0] == self.num_tiles:
                     if targets is None:
-                        # How to make this a method? does it need to be?
+                        # TODO Make seperate method
                         feature_stack = []
                         for i in range(self.num_tiles):
                             img = [image[i]]
@@ -140,7 +147,7 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
                         ext_inputs = self._tile_processing(image, targets)
                         feature_stack = []
                         count = 0
-                        print(ext_inputs["tile_idx"])
+
                         for i in range(self.num_tiles):
                             if i in ext_inputs["tile_idx"]:
                                 img = [image[0][i]]
@@ -148,7 +155,7 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
                                 targets[0]["masks"] = ext_inputs["tile_masks"][count]
                                 targets[0]["boxes"] = ext_inputs["tile_boxes"][count]
                                 targets[0]["labels"] = ext_inputs["tile_labels"][count]
-
+                                # glorified resize 
                                 img, targets = self.tile_transform(img, targets)
                         
                                 part_features = self.backbone.body(img.tensors)
@@ -185,21 +192,46 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
                         jig_pred = self.self_supervised_head(jig_features)
                         jig_pred_list.append(jig_pred)
 
-                else:
-                    # this is to carry out convetional mrcnn
-                    pass
-            
-            jig_pred_tensor = torch.stack(jig_pred_list)
-            jig_pred_tensor = jig_pred_tensor.squeeze(1)
+                    jig_pred_tensor = torch.stack(jig_pred_list)
+                    jig_pred_tensor = jig_pred_tensor.squeeze(1)
             if targets is None:
                 return jig_pred_tensor
             else:
-                print(acc_loss_count)
                 for key in acc_losses.keys():
                     acc_losses[key] /= acc_loss_count
                 return acc_losses, jig_pred_tensor
 
+        # code for validation and test
+        else:
+            original_image_sizes: List[Tuple[int, int]] = []
+            for img in images:
+                val = img.shape[-2:]
+                torch._assert(
+                    len(val) == 2,
+                    f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
+                )
+                original_image_sizes.append((val[0], val[1]))
 
+        # this is to carry out convetional mrcnn
+        images, targets = self.transform(images, targets)
+
+        features = self.backbone(images.tensors)
+        if isinstance(features, torch.Tensor):
+            features = OrderedDict([("0", features)])
+
+        proposals, proposal_losses = self.rpn(images, features, targets)
+        detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
+
+        detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)  # type: ignore[operator]
+
+        losses = {}
+        losses.update(detector_losses)
+        losses.update(proposal_losses)
+
+        if self.training:
+            return losses
+        return detections
+            
     def _tile_processing(self, images, targets):
         """ Detials """
         ext_inputs = {

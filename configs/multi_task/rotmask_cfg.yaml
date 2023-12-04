@@ -22,7 +22,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "ROTMASK_WHOLE_TEST" 
+  exp_dir: "ROTMASK_TEST2" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth

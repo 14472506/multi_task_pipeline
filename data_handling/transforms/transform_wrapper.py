@@ -55,12 +55,53 @@ class JigsawWrapper(torch.utils.data.Dataset):
             transformed = torch.tensor(transformed)
             transformed = transformed.to(dtype=torch.float32)
             aug_stack.append(transformed)
-
+        
         stack = torch.stack(aug_stack)
         stack = stack.permute(0,3,1,2)
         image = stack
-
+        
         return(image, label) 
+
+        #tile_np = []
+        ## loop through base stack
+        #for i in image:
+        #    pil_trans = T.ToPILImage()
+        #    pil = pil_trans(i)
+        #    np_img = np.array(pil)
+        #    tile_np.append(np_img)
+        #
+        #transformed = self.transforms(image = tile_np[0],
+        #                              image0 = tile_np[1],
+        #                              image1 = tile_np[2],
+        #                              image2 = tile_np[3],
+        #                              image3 = tile_np[4],
+        #                              image4 = tile_np[5],
+        #                              image5 = tile_np[6],
+        #                              image6 = tile_np[7],
+        #                              image7 = tile_np[8])
+        #
+        #auged_list = [
+        #    torch.tensor(transformed["image"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image0"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image1"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image2"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image3"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image4"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image5"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image6"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image7"]).to(dtype=torch.float32),
+        #]
+        #
+        ##transformed = self.transforms(image=np_img)["image"]
+        ##transformed = torch.tensor(transformed)
+        ##transformed = transformed.to(dtype=torch.float32)
+        ##aug_stack.append(transformed)
+        #
+        #stack = torch.stack(auged_list)
+        #image = stack.permute(0,3,1,2)
+        #
+        #return(image, label)
+    
 
     def __len__(self):
         """ Details """

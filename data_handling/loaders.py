@@ -65,7 +65,7 @@ class Loaders():
             "mask_rcnn": COCODataset,
             "dual_mask_multi_task": COCODataset,
             "rotmask_multi_task": [COCORotDataset, RotNetDataset],
-            "jigmask_multi_task": [COCOJigsawDataset, JigsawDataset]
+            "jigmask_multi_task": [COCOJigsawDataset, JigsawDataset, COCODataset]
         }
         self.dataset_class = dataset_selector[self.model_type]
     
@@ -78,7 +78,7 @@ class Loaders():
             "jigsaw": self._classifier_loader,
             "mask_rcnn": self._instance_loader,
             "rotmask_multi_task": self._multitask_loader,
-            "jigmask_multi_task": self._multitask_loader,
+            "jigmask_multi_task": self._jig_multitask_loader,
             "dual_mask_multi_task": self._dual_multitask_loader
         }
         if self.type == "train":
@@ -286,6 +286,77 @@ class Loaders():
 
             sup_train_dataset = combined_dataset_class(self.cfg, "train")
             sup_val_dataset = combined_dataset_class(self.cfg, "val")
+            ssl_train_dataset = splits[0]
+            ssl_val_dataset = splits[1]
+
+            if self.train_augs:
+                sup_train_transforms = Transforms(self.cfg).transforms()
+                ssl_train_transforms = Transforms(mod_cfg).transforms()
+                sup_train_transforms_wrapper = wrappers(self.model_type)
+                ssl_train_transforms_wrapper = wrappers(sub_model_type)
+                sup_train_dataset = sup_train_transforms_wrapper(sup_train_dataset, sup_train_transforms)
+                ssl_train_dataset = ssl_train_transforms_wrapper(ssl_train_dataset, ssl_train_transforms)
+                print("train augs applied")
+
+            if self.val_augs:
+                sup_val_transforms = Transforms(self.cfg).transforms()
+                ssl_val_transforms = Transforms(mod_cfg).transforms()
+                sup_val_transforms_wrapper = wrappers(self.model_type)
+                ssl_val_transforms_wrapper = wrappers(sub_model_type)
+                sup_val_dataset = sup_val_transforms_wrapper(sup_val_dataset, sup_val_transforms)
+                ssl_val_dataset = ssl_val_transforms_wrapper(ssl_val_dataset, ssl_val_transforms)
+                print("train augs applied")
+
+            sup_train_loader = self._create_dataloader(sup_train_dataset, self.train_bs[0], self.train_shuffle, self.train_workers, COCO_collate_function)
+            ssl_train_loader = self._create_dataloader(ssl_train_dataset, self.train_bs[1], self.train_shuffle, self.train_workers, None)            
+            sup_val_loader = self._create_dataloader(sup_val_dataset, self.val_bs[0], self.val_shuffle, self.val_workers, COCO_collate_function)
+            ssl_val_loader = self._create_dataloader(ssl_val_dataset, self.val_bs[1], self.val_shuffle, self.val_workers, None)            
+            
+            return [sup_train_loader, ssl_train_loader], [sup_val_loader, ssl_val_loader] 
+
+    def _jig_multitask_loader(self):
+        """ creates a dataloader for the multi task instance segmentation and classifier based models """
+        self.train_test_split = self.cfg["params"]["split"]["train_test"]
+        self.train_val_split = self.cfg["params"]["split"]["train_val"]
+        sub_model_type = self.cfg["sub_mod_name"]
+        mod_cfg = self.cfg.copy()
+        mod_cfg["source"] = self.cfg["source"][1]
+        mod_cfg["model_name"] = self.cfg["sub_mod_name"]
+        
+        # get dataset classes
+        combined_dataset_class = self.dataset_class[0]
+        ssl_class = self.dataset_class[1]
+        coco_class = self.dataset_class[2]
+
+        # get all ssl data
+        all_ssl_data = ssl_class(mod_cfg, self.cfg["random_seed"])
+        splits = self._data_split(all_ssl_data)
+
+        if self.type == "test":
+
+            self.cfg["source"] = 'data_handling/sources/jersey_dataset_v4'
+            sup_test_dataset = coco_class(self.cfg, "test")
+            ssl_test_dataset = splits[0]
+
+            if self.test_augs:
+                sup_transforms = Transforms(self.cfg).transforms()
+                ssl_transforms = Transforms(mod_cfg).transforms()
+                sup_transforms_wrapper = wrappers(self.model_type)
+                ssl_transforms_wrapper = wrappers(sub_model_type)
+                sup_test_dataset = sup_transforms_wrapper(sup_test_dataset, sup_transforms)
+                ssl_test_dataset = ssl_transforms_wrapper(ssl_test_dataset, ssl_transforms)
+                print("test augs applied")
+            
+            sup_test_loader = self._create_dataloader(sup_test_dataset, self.test_bs[0], self.test_shuffle, self.test_workers, COCO_collate_function)
+            ssl_test_loader = self._create_dataloader(ssl_test_dataset, self.test_bs[1], self.test_shuffle, self.test_workers, None)
+
+            return [sup_test_loader, ssl_test_loader]
+        
+        if self.type == "train":
+
+            sup_train_dataset = combined_dataset_class(self.cfg, "train")
+            self.cfg["source"] = 'data_handling/sources/jersey_dataset_v4'
+            sup_val_dataset = coco_class(self.cfg, "val")
             ssl_train_dataset = splits[0]
             ssl_val_dataset = splits[1]
 

@@ -60,7 +60,7 @@ dataset:
     train:
       dir: train
       json: train.json
-      batch_size: [1, 4]
+      batch_size: [1, 2]
       shuffle: true
       num_workers: 0
       augmentations: false
@@ -87,7 +87,7 @@ optimiser:
   model_name: *model_name
   opt_name: "Adam"
   opt_params:
-    lr: 0.000000005 
+    lr: 0.00005 
   sched_name: "StepLR"
   sched_params:
     step: *step
