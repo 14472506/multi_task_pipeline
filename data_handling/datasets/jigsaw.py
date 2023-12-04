@@ -55,39 +55,17 @@ class JigsawDataset(data.Dataset):
         image = self._resize(image)
 
         # getting tile construction data from image
-        width, _= image.size
+        width, height = image.size
         num_tiles_per_dimension = int(np.sqrt(self.num_tiles))
-        tile_length = width // num_tiles_per_dimension 
+        width_tiles = width // num_tiles_per_dimension
+        height_tiles = height // num_tiles_per_dimension
 
         # converting image to tensor
         tensor_transform = torch_trans.Compose([torch_trans.ToTensor()])
         image_tensor = tensor_transform(image)
-    
+        
         # data collection and buffer init
-        tiles = []
-        buffer = int(tile_length * 0.1)
-
-        # entering set of loops to go through both dimensions of image
-        for i in range(num_tiles_per_dimension):
-            for j in range(num_tiles_per_dimension):
-                if self.buffer:
-                    tile_ij = torch.empty(image_tensor.shape[0], tile_length - buffer, tile_length - buffer)
-                    buffer_x1, buffer_x2 = np.random.multinomial(buffer, [0.5, 0.5])
-                    buffer_y1, buffer_y2 = np.random.multinomial(buffer, [0.5, 0.5])
-                    tile_x1 = i * tile_length + buffer_x1 
-                    tile_x2 = (i + 1) * tile_length - buffer_x2
-                    tile_y1 = j * tile_length + buffer_y1 
-                    tile_y2 = (j + 1) * tile_length - buffer_y2
-                    tile_ij = image_tensor[:, tile_x1: tile_x2, tile_y1: tile_y2]
-                else:
-                    tile_ij = image_tensor[:,
-                                i * tile_length: (i + 1) * tile_length,
-                                j * tile_length: (j + 1) * tile_length]
-                    
-                tiles.append(tile_ij)
-
-        # Tensorising tiles
-        tiles = torch.stack(tiles)
+        tiles = self._tensor_to_tiles(image_tensor, width, height)
                
         # randomly shuffle tiles
         y = []
@@ -111,6 +89,31 @@ class JigsawDataset(data.Dataset):
         """
         return len(self.images)
     
+    def _tensor_to_tiles(self, tensor, width, height):
+        """ Detials """
+        # get tile constructors
+        num_tiles_per_dimension = int(np.sqrt(self.num_tiles))
+        width_tiles = width // num_tiles_per_dimension
+        height_tiles = height // num_tiles_per_dimension
+
+        tensor = tensor.squeeze(0)
+
+        tiles = []
+        for i in range(num_tiles_per_dimension):
+            for j in range(num_tiles_per_dimension):
+                
+                hmin =  i * height_tiles
+                hmax = (i+1) * height_tiles
+                wmin =  j * width_tiles
+                wmax = (j+1) * width_tiles
+
+                tile_ij = tensor[:, hmin: hmax, wmin: wmax]
+
+                tiles.append(tile_ij)
+        tiles = torch.stack(tiles)
+
+        return tiles
+    
     def _basic_square_crop(self, img):
         """ Detials """
 
@@ -127,7 +130,7 @@ class JigsawDataset(data.Dataset):
 
         return cropped_img
 
-    def _resize(self, img, size=1000):
+    def _resize(self, img, size=500):
         """ Detials """
         resized_img = img.resize((size, size))
         return(resized_img)

@@ -77,6 +77,7 @@ class Logs():
             "jigsaw": self._class_logs,
             "mask_rcnn": self._instance_seg_logs,
             "rotmask_multi_task": self._multitask_logs,
+            "jigmask_multi_task": self._multitask_logs,
             "dual_mask_multi_task": self._multitask_logs2
         }
         return logs_mapper[self.model_name]()

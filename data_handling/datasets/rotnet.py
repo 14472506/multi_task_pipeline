@@ -31,6 +31,8 @@ class RotNetDataset(data.Dataset):
         try: 
             image = Image.open(img_path).convert("RGB")
         except OSError:
+            print("IMAGE NOT FOUND")
+            print(img_path)
             pass
         
         # image to tensor

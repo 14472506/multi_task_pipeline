@@ -60,6 +60,18 @@ class Optimisers():
 
         if self.model_name == "rotmask_multi_task":
             self.model_params = [{"params": self.model.parameters(), "lr": self.params["lr"]}, {"params": self.loss[0].parameters()}]
+        
+        if self.model_name == "jigmask_multi_task":
+            jigsaw_params = [self.model.self_supervised_head.parameters()]
+            other = [p for p in self.model.parameters() if p not in jigsaw_params]
+
+            self.model_params = [{"params": self.model.backbone.parameters(), "lr": self.params["lr"]}, 
+                                 {"params": self.model.rpn.parameters(), "lr": self.params["lr"]},
+                                 {"params": self.model.roi_heads.parameters(), "lr": self.params["lr"]},
+                                 {"params": self.model.jig_avg_pooling.parameters(), "lr": self.params["lr"]}, 
+                                 {"params": self.model.jig_fc_layers.parameters(), "lr": self.params["lr"]}, 
+                                 {"params": self.model.self_supervised_head.parameters(), "lr": self.params["lr"]}, 
+                                 {"params": self.loss[0].parameters()}]
 
         if self.model_name == "dual_mask_multi_task":
             if isinstance(self.loss, list):

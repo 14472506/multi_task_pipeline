@@ -21,6 +21,7 @@ class Step():
             "jigsaw": self._classifier_action,
             "mask_rcnn": self._instance_seg_action,
             "rotmask_multi_task": self._multitask_action,
+            "jigmask_multi_task": self._multitask_action,
             "dual_mask_multi_task": self._multitask_action2
         }
         return self.action_map[self.model_name]
@@ -254,23 +255,16 @@ class Step():
 
             # supervised and self supervised loader extraction
             sup_iter = iter(loader[0])
-            ssl_iter = iter(loader[1])
 
             # losses
             awl = loss_fun[0]
             loss = loss_fun[1]
 
+
             primary_grad = grad_acc[0] if grad_acc else 1
             secondar_grad = grad_acc[1] if grad_acc else 1
 
             sup_loss_acc, sup_ssl_loss_acc, ssl_loss_acc, weighted_losses_acc, pf_loss = 0, 0, 0, 0, 0
-
-            # ssl step adjust goes here
-            ssl_adjust = log["iter_accume"] % len(loader[1])
-            if ssl_adjust:
-                print("Adjusting by %s steps" %(ssl_adjust))
-                for i in range(ssl_adjust):
-                    _, _ = next(ssl_iter)
 
             # Notes: Dont reset the iterator for the larger model at the begining of each epoch, only when the iterator runs out
 
@@ -280,43 +274,43 @@ class Step():
             # while not sup_iter.end()
                 
             for i in range(len(loader[0])):
-                sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)
-                sup_im = list(image.to(device) for image in sup_im)
+                sup_im, sup_target, sup_ssl_target = next(sup_iter)
+                sup_im = sup_im[0].to(device) #list(image.to(device) for image in sup_im)
                 sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
-                sup_ssl_im = sup_ssl_im[0].to(device)
                 sup_ssl_target = sup_ssl_target[0].to(device)
 
                 with autocast():
                     # forward pass
-                    sup_output = model.forward(sup_im, sup_target, mode="segm")
+                    sup_output, sup_ssl_pred = model.forward(sup_im, sup_target) # model.forward(sup_im, sup_ssl_im, sup_target)
                     sup_loss = sum(loss for loss in sup_output.values())
-                    sup_ssl_output = model.forward(sup_ssl_im, mode="ssl")
-                    sup_ssl_loss = loss(sup_ssl_output[0], sup_ssl_target)
-
+                    ssl_loss = loss(sup_ssl_pred ,sup_ssl_target.unsqueeze(0))
                     #sup_loss /= primary_grad
-                    #sup_ssl_loss /= primary_grad
 
                     sup_loss_acc += sup_loss.item()
-                    sup_ssl_loss_acc += sup_ssl_loss.item()
+                    sup_ssl_loss_acc += ssl_loss.item()
                     
                     for i in range(0, secondar_grad):
                         try:
-                            ssl_im, ssl_target = next(ssl_iter) 
+                            ssl_im, ssl_target = next(self.train_ssl_iter) 
                         except StopIteration:
                             print("resetting iter")
-                            ssl_iter = iter(loader[1])
-                            ssl_im, ssl_target = next(ssl_iter)
+                            self.train_ssl_iter = iter(loader[1])
+                            ssl_im, ssl_target = next(self.train_ssl_iter)
                         ssl_im = ssl_im.to(device)
                         ssl_target = ssl_target.to(device)
 
                         # forward pass
-                        ssl_output = model.forward(ssl_im, mode="ssl")
-                        ssl_loss = loss(ssl_output, ssl_target)
+                        ssl_output = model.forward(ssl_im)
+                        ssl_loss += loss(ssl_output, ssl_target)
 
-                        ssl_loss =+ ssl_loss.div_(secondar_grad)
-
+                    ssl_loss = ssl_loss.div_(secondar_grad * primary_grad)
+                    
                     ssl_loss_acc += ssl_loss.item()
-                    weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], sup_ssl_loss, ssl_loss)
+                    weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss)
+          
+                    #weighted_losses = awl(sup_loss, ssl_loss)
+                    #weighted_losses = sup_loss + ssl_loss
+
                     weighted_losses_acc += weighted_losses.item()
                     pf_loss += weighted_losses.item()
                                 
@@ -332,7 +326,7 @@ class Step():
                 iter_count += 1
 
                 # Clear GPU Memory
-                del sup_im, sup_target, sup_ssl_im, sup_ssl_target, sup_output, sup_ssl_output, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im
+                del sup_im, sup_target, sup_ssl_target, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im ,sup_output, sup_ssl_pred
                 torch.cuda.empty_cache()
                 gc.collect()
 
@@ -350,87 +344,92 @@ class Step():
             """ Detials """
             # loop execution setup
             # configure model
-            model.train()            
-            if hasattr(model.backbone.body.layer4, "dropout"):
-                p = model.backbone.body.layer4.dropout.p
-                model.backbone.body.layer4.dropout.p = 0
-                
-            sup_loss_acc = 0
-            sup_ssl_loss_acc = 0
-            ssl_loss_acc = 0
-            weighted_losses_acc = 0
-
-            # supervised and self supervised loader extraction
-            sup_iter = iter(loader[0])
-            ssl_iter = iter(loader[1])
-
-            # losses
-            awl = loss_fun[0]
-            loss = loss_fun[1]
-
-            # ssl step adjust goes here
-            ssl_adjust = log["val_it_accume"] % len(loader[1])
-            if ssl_adjust:
-                print("Adjusting by %s steps" %(ssl_adjust))
-                for i in range(ssl_adjust):
-                    _, _ = next(ssl_iter)
-
-            # ssl step adjust goes here
-            for i in range(len(loader[0])):
-                sup_im, sup_target, sup_ssl_im, sup_ssl_target = next(sup_iter)
-                sup_im = list(image.to(device) for image in sup_im)
-                sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
-                sup_ssl_im = sup_ssl_im[0].to(device)
-                sup_ssl_target = sup_ssl_target[0].to(device)
-
-                try:
-                    ssl_im, ssl_target = next(ssl_iter) 
-                except StopIteration:
-                    print("resetting iter")
-                    ssl_iter = iter(loader[1])
-                    ssl_im, ssl_target = next(ssl_iter)  
-                ssl_im = ssl_im.to(device)
-                ssl_target = ssl_target.to(device)
-
-                with torch.no_grad():
-                    with autocast():
-                        # forward pass
-                        sup_output = model.forward(sup_im, sup_target, mode="segm")
-                        sup_loss = sum(loss for loss in sup_output.values())
-                        sup_ssl_output = model.forward(sup_ssl_im, mode="ssl")
-                        sup_ssl_loss = loss(sup_ssl_output[0], sup_ssl_target)
-                        ssl_output = model.forward(ssl_im, mode="ssl")
-                        ssl_loss = loss(ssl_output, ssl_target)
-                
-                        weighted_losses = awl(sup_loss, sup_ssl_loss, ssl_loss)
-
-                # collecting losses
-                sup_loss_acc += sup_loss.item()
-                sup_ssl_loss_acc += sup_ssl_loss.item()
-                ssl_loss_acc += ssl_loss.item()
-                weighted_losses_acc += weighted_losses.item()
-
-                # Clear GPU Memory
-                del sup_im, sup_target, sup_ssl_im, sup_ssl_target, sup_output, sup_ssl_output, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im
-                torch.cuda.empty_cache()
-                gc.collect()
-
-            # model re config
-            if hasattr(model.backbone.body.layer4, "dropout"):
-                model.backbone.body.layer4.dropout.p = p
-
-            # set form map evaluation
+            #model.train()            
+            #if hasattr(model.backbone.body.layer4, "dropout"):
+            #    p = model.backbone.body.layer4.dropout.p
+            #    model.backbone.body.layer4.dropout.p = 0
+            #
+            ## supervised and self supervised loader extraction
+            #sup_iter = iter(loader[0])
+            #    
+            ## losses
+            #awl = loss_fun[0]
+            #loss = loss_fun[1]
+            #
+            #primary_grad = 1
+            #secondar_grad = 1
+            #
+            #sup_loss_acc, sup_ssl_loss_acc, ssl_loss_acc, weighted_losses_acc= 0, 0, 0, 0
+            #
+            ## ssl step adjust goes here
+            #for i in range(len(loader[0])):
+            #    sup_im, sup_target, sup_ssl_target = next(sup_iter)
+            #    sup_im = sup_im[0].to(device)
+            #    sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
+            #    sup_ssl_target = sup_ssl_target[0].to(device)
+            #
+            #    with torch.no_grad():
+            #        # forward pass
+            #        sup_output, sup_ssl_output = model.forward(sup_im, sup_target) 
+            #        sup_loss = sum(loss for loss in sup_output.values())
+            #        sup_ssl_loss = loss(sup_ssl_output, sup_ssl_target.unsqueeze(0))
+            #        sup_loss /= primary_grad
+            #        sup_ssl_loss /= primary_grad
+            #
+            #        sup_loss_acc += sup_loss.item()
+            #        sup_ssl_loss_acc += sup_ssl_loss.item()
+            #
+            #    try:
+            #        ssl_im, ssl_target = next(self.val_ssl_iter) 
+            #    except StopIteration:
+            #        print("resetting iter")
+            #        self.val_ssl_iter = iter(loader[1])
+            #        ssl_im, ssl_target = next(self.val_ssl_iter)
+            #    ssl_im = ssl_im.to(device)
+            #    ssl_target = ssl_target.to(device)
+            #
+            #    with torch.no_grad():
+            #        ssl_output = model.forward(ssl_im)
+            #        ssl_loss = loss(ssl_output, ssl_target)
+            #
+            #        # combining sup_ssl and ssl losses
+            #        ssl_loss + sup_ssl_loss 
+            #        ssl_loss = ssl_loss.div_(secondar_grad * primary_grad)
+            #
+            #        ssl_loss_acc += ssl_loss.item()
+            #        weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss)
+            #        weighted_losses = awl(sup_loss, ssl_loss)
+            #        weighted_losses_acc += weighted_losses.item()
+            #
+            #    # Clear GPU Memory
+            #    del sup_im, sup_target, sup_ssl_target, sup_output, sup_ssl_output, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im
+            #    torch.cuda.empty_cache()
+            #    gc.collect()
+            #
+            #    print(i)
+            #
+            ## logging
+            #log["val_loss"].append(weighted_losses_acc/len(loader[0]))
+            #log["val_sup_loss"].append(sup_loss_acc/len(loader[0]))
+            #log["val_sup_ssl_loss"].append(sup_ssl_loss_acc/len(loader[0]))
+            #log["val_ssl_loss"].append(ssl_loss_acc/len(loader[0]))
+            #
+            ## model re config
+            #if hasattr(model.backbone.body.layer4, "dropout"):
+            #    model.backbone.body.layer4.dropout.p = p
+            # 
+            ## set form map evaluation
             model.eval()
             metric = MeanAveragePrecision(iou_type = "segm")
             sup_iter = iter(loader[0])
 
             for i in range(len(loader[0])):
-                input, target, _, _ = next(sup_iter)
-                input = list(image.to(device) for image in input)
+                im_input, target = next(sup_iter) # removed , _ for dev
+                im_input = list(image.to(device) for image in im_input)
         
                 with torch.autocast("cuda"):
                     with torch.no_grad():
-                        predictions = model(input)
+                        predictions = model(im_input)
 
                 masks_in = predictions[0]["masks"].detach().cpu()
                 masks_in = masks_in > 0.5
@@ -441,7 +440,7 @@ class Step():
                 targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
                 metric.update(preds, targs)
 
-                del predictions, input, target, masks_in, targs_masks, preds, targs
+                del predictions, im_input, target, masks_in, targs_masks, preds, targs
                 torch.cuda.empty_cache()
             
             res = metric.compute()
@@ -450,11 +449,7 @@ class Step():
             # adjusting val iter accumulation for ssl step adjust
             log["val_it_accume"] += len(loader[0])
 
-            # logging
-            log["val_loss"].append(weighted_losses_acc/len(loader[0]))
-            log["val_sup_loss"].append(sup_loss_acc/len(loader[0]))
-            log["val_sup_ssl_loss"].append(sup_ssl_loss_acc/len(loader[0]))
-            log["val_ssl_loss"].append(ssl_loss_acc/len(loader[0]))
+            #logging
             log["map"].append(map)
             
             logger.val_loop_reporter(epoch, device, log["map"][-1])
@@ -466,6 +461,8 @@ class Step():
 
         loss[0].to(device)
         scaler = torch.cuda.amp.GradScaler(enabled=True)
+        self.train_ssl_iter = iter(train_loader[1])
+        self.val_ssl_iter = iter(val_loader[1])
 
         print(banner)
         print(train_title)

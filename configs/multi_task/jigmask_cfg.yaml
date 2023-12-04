@@ -3,9 +3,10 @@ meta_data:
   description: "Base config file for training RotNet self supervised classifier model using a selected directory of images"
 
 defaults: 
-  model_name: &model_name rotmask_multi_task
+  model_name: &model_name jigmask_multi_task
   step: &step 100
-  num_rotations: &num_rotations 4
+  num_tiles: &num_tiles 9
+  num_permutations: &num_permutations 100
   seed: &seed 42
 
 loops:
@@ -22,7 +23,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "ROTMASK_TEST2" 
+  exp_dir: "JIGMASK_DEV" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -33,7 +34,8 @@ model:
   load_model: false
   params:
     backbone_type: pre-trained
-    num_rotations: *num_rotations
+    num_tiles: *num_tiles
+    num_permutations: *num_permutations
     drop_out: 0.5
     batch_norm: false
     trainable_layers: 5
@@ -46,20 +48,22 @@ dataset:
   source: [data_handling/sources/jersey_dataset_v4, data_handling/sources/All_RGB]
   random_seed: *seed
   model_name: *model_name
-  sub_mod_name: rotnet_resnet_50
+  sub_mod_name: jigmask_resnet_50
   col_fn: true
   params:
+    num_tiles: *num_tiles
+    num_permutations: *num_permutations
+    buffer: false
     split:
       train_test: 0.8
       train_val: 0.8
-    num_rotations: *num_rotations
     train:
       dir: train
       json: train.json
-      batch_size: [1, 1]
+      batch_size: [1, 2]
       shuffle: true
       num_workers: 0
-      augmentations: true
+      augmentations: false
     val:
       dir: val
       json: val.json

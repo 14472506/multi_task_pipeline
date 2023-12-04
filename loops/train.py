@@ -105,6 +105,7 @@ class Train():
         """
         self.model = Models(self.model_cfg).model()
         self.model.to(self.device)
+        #print(self.model)
 
     def _initialise_dataloader(self):
         """ 

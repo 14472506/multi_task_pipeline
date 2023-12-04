@@ -43,13 +43,29 @@ class Transforms():
         transforms = A.Compose([
             A.OneOf([
                 A.RandomBrightnessContrast(p=0.3),
-                A.ToGray(p=0.3),
                 A.ToGray(p=0.2),
                 A.Downscale(p=0.1),
                 A.ColorJitter(p=0.2)
-                ], p=0.8)
+                ], p=0.1)
             ], p=1)
-
+        
+        #transforms = A.Compose([
+        #    A.OneOf([
+        #        A.RandomBrightnessContrast(p=0.5),
+        #        A.ToGray(p=1),
+        #        #A.Downscale(p=0.1),
+        #        A.ColorJitter(p=0.2)
+        #        ], p=0.5)
+        #    ], p=0.1, additional_targets={'image0': 'image', 
+        #                                'image1': 'image',
+        #                                'image2': 'image',
+        #                                'image3': 'image',
+        #                                'image4': 'image',
+        #                                'image5': 'image',
+        #                                'image6': 'image',
+        #                                'image7': 'image',
+        #                                })
+        
         return transforms
     
     def _maskrcnn_tranforms(self):

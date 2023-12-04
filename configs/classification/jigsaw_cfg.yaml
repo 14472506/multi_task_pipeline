@@ -10,12 +10,11 @@ defaults:
   num_permutations: &num_permutations 100
 
 loops:
-  device: "cuda:1"
+  device: "cuda:0"
   grad_acc: null
   start: 0
   end: 50
   seed: *seed
-
 
 logs:
   model_name: *model_name
@@ -24,7 +23,7 @@ logs:
   iter_init: 0
   best_init: .inf
   step: *step
-  exp_dir: "jigsaw_pt" 
+  exp_dir: "Jigsaw_bs32_500by500centre_crop_with_augs" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -32,6 +31,7 @@ logs:
 
 model:
   model_name: *model_name
+  load_model: false
   params:
     backbone_type: pre-trained
     num_tiles: *num_tiles
@@ -53,10 +53,10 @@ dataset:
         train_test: 0.8
         train_val: 0.8
       train:
-        batch_size: 4
+        batch_size: 32
         shuffle: true
         num_workers: 0
-        augmentations: true
+        augmentations: false
       val:
         batch_size: 1
         shuffle: false

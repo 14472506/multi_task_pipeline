@@ -13,8 +13,8 @@ when the model attribute is called
 # local packages
 from .classification.rotnet_classifier_model import RotNet
 from .classification.jigsaw_classifier_model import Jigsaw
-from .multi_task.rotmask_multitask_model import RotMask_Multi_Task
 from .multi_task.rotmask_model_dev import rotmask_resnet50_fpn
+from .multi_task.jigmask_model_dev import jigmask_resnet50_fpn
 from .instance_segmentation.mask_rcnn_model import maskrcnn_resnet50_fpn
 from .multi_task.dual_mask_model_dev import dual_mask_resnet50_fpn
 
@@ -32,8 +32,8 @@ class Models():
             "rotnet_resnet_50": RotNet,
             "jigsaw": Jigsaw,
             "mask_rcnn":maskrcnn_resnet50_fpn,
-            #"rotmask_multi_task": RotMask_Multi_Task,
             "rotmask_multi_task": rotmask_resnet50_fpn,
+            "jigmask_multi_task": jigmask_resnet50_fpn,
             "dual_mask_multi_task": dual_mask_resnet50_fpn
         }
     

@@ -94,11 +94,11 @@ class RotMaskRCNN(torchvision.models.detection.MaskRCNN):
             if targets is None:
                 
                 # Handling just RotNet for SSL applications
-                features = self.backbone(images.tensors)
-                in_features = features["3"]          
-                x = self.self_supervised_head(in_features)
-                return x
-
+                part_features = self.backbone.body(images)
+                rot_features = part_features["3"]          
+                rot_pred = self.self_supervised_head(rot_features)
+                return rot_pred
+            
             else:
                 for target in targets:
                     boxes = target["boxes"]
@@ -137,10 +137,11 @@ class RotMaskRCNN(torchvision.models.detection.MaskRCNN):
                         f" Found invalid box {degen_bb} for target at index {target_idx}.",
                     )
 
-        features = self.backbone(images.tensors)
+        part_features = self.backbone.body(images.tensors)
+        features = self.backbone.fpn(part_features)
         
         # Handling RotNet for multi task execution
-        rot_features = features["3"]
+        rot_features = part_features["3"]
         rot_pred = self.self_supervised_head(rot_features)   
 
         if isinstance(features, torch.Tensor):
@@ -153,13 +154,17 @@ class RotMaskRCNN(torchvision.models.detection.MaskRCNN):
         losses.update(detector_losses)
         losses.update(proposal_losses)
 
-        if torch.jit.is_scripting():
-            if not self._has_warned:
-                warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
-                self._has_warned = True
-            return losses, detections
-        else:
-            return self.eager_outputs(losses, detections, rot_pred)
+        #if torch.jit.is_scripting():
+        #    if not self._has_warned:
+        #        warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
+        #        self._has_warned = True
+        #    return losses, detections
+        #else:
+        #    return self.eager_outputs(losses, detections, rot_pred)
+        if self.training:
+            return losses, rot_pred
+
+        return detections
                           
 # model init may need to go here too, how does the MRCNN or faster RCNN class do this?
 def rotmask_resnet50_fpn(cfg):

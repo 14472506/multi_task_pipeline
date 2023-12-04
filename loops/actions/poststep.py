@@ -18,6 +18,7 @@ class PostStep():
             "jigsaw": self._classifier_action,
             "mask_rcnn": self._instance_seg_action,
             "rotmask_multi_task": self._multitask_action,
+            "jigmask_multi_task": self._multitask_action,
             "dual_mask_multi_task": self._multitask_action
         }
         return self.action_map[self.model_name]
@@ -47,15 +48,15 @@ class PostStep():
         """ Detials """
         logger.save_model(epoch, model, optimiser, "last")
 
-        if logs["val_sup_loss"][-1] <= logger.best[0]:
-            if self.stepped:
-                logs["post_best_val"].append(logs["val_sup_loss"][-1])
-                logs["post_best_epoch"].append(epoch)
-                logger.best[0] = logs["val_sup_loss"][-1]
-            else:
-                logs["pre_best_val"].append(logs["val_sup_loss"][-1])
-                logs["pre_best_epoch"].append(epoch)
-                logger.best[0] = logs["val_sup_loss"][-1]
+        #if logs["val_sup_loss"][-1] <= logger.best[0]:
+        #    if self.stepped:
+        #        logs["post_best_val"].append(logs["val_sup_loss"][-1])
+        #        logs["post_best_epoch"].append(epoch)
+        #        logger.best[0] = logs["val_sup_loss"][-1]
+        #    else:
+        #        logs["pre_best_val"].append(logs["val_sup_loss"][-1])
+        #        logs["pre_best_epoch"].append(epoch)
+        #        logger.best[0] = logs["val_sup_loss"][-1]
         
         if logs["map"][-1] >= logger.best[1]:
             if self.stepped:

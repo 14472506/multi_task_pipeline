@@ -55,12 +55,53 @@ class JigsawWrapper(torch.utils.data.Dataset):
             transformed = torch.tensor(transformed)
             transformed = transformed.to(dtype=torch.float32)
             aug_stack.append(transformed)
-
+        
         stack = torch.stack(aug_stack)
         stack = stack.permute(0,3,1,2)
         image = stack
-
+        
         return(image, label) 
+
+        #tile_np = []
+        ## loop through base stack
+        #for i in image:
+        #    pil_trans = T.ToPILImage()
+        #    pil = pil_trans(i)
+        #    np_img = np.array(pil)
+        #    tile_np.append(np_img)
+        #
+        #transformed = self.transforms(image = tile_np[0],
+        #                              image0 = tile_np[1],
+        #                              image1 = tile_np[2],
+        #                              image2 = tile_np[3],
+        #                              image3 = tile_np[4],
+        #                              image4 = tile_np[5],
+        #                              image5 = tile_np[6],
+        #                              image6 = tile_np[7],
+        #                              image7 = tile_np[8])
+        #
+        #auged_list = [
+        #    torch.tensor(transformed["image"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image0"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image1"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image2"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image3"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image4"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image5"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image6"]).to(dtype=torch.float32),
+        #    torch.tensor(transformed["image7"]).to(dtype=torch.float32),
+        #]
+        #
+        ##transformed = self.transforms(image=np_img)["image"]
+        ##transformed = torch.tensor(transformed)
+        ##transformed = transformed.to(dtype=torch.float32)
+        ##aug_stack.append(transformed)
+        #
+        #stack = torch.stack(auged_list)
+        #image = stack.permute(0,3,1,2)
+        #
+        #return(image, label)
+    
 
     def __len__(self):
         """ Details """
@@ -139,24 +180,22 @@ class MultiTaskWrapper(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         """Details"""
         # Getting image
-        mrcnn_tensor, mrcnn_target, rot_tensor, rot_target = self.dataset[idx]
+        mrcnn_tensor, mrcnn_target, rot_target = self.dataset[idx]
 
         # converting tensors to arrays
         to_img = T.ToPILImage()        
         mrcnn_img = to_img(mrcnn_tensor)
-        rot_img = to_img(rot_tensor)
 
         mrcnn_arr = np.array(mrcnn_img)
-        rot_arr = np.array(rot_img)
 
         np_masks = []
-        for mask, box in zip(mrcnn_target["masks"], mrcnn_target["boxes"]): 
+        for mask in (mrcnn_target["masks"]): 
             mask_img = to_img(mask)
             # append values to accumulated lists
             np_masks.append(np.array(mask_img))
 
         # applying augmentations
-        aug_data = self.transforms(image=mrcnn_arr, image0=rot_arr, masks=np_masks)
+        aug_data = self.transforms(image=mrcnn_arr, masks=np_masks)
 
         boxes_list = []
         for mask in aug_data["masks"]:
@@ -170,13 +209,10 @@ class MultiTaskWrapper(torch.utils.data.Dataset):
         mrcnn_transformed = torch.from_numpy(aug_data["image"])
         mrcnn_transformed = mrcnn_transformed.permute(2,0,1)
         mrcnn_transformed = mrcnn_transformed.to(dtype=torch.float32) / 255.0
-        rot_transformed = torch.from_numpy(aug_data["image0"])
-        rot_transformed = rot_transformed.permute(2,0,1)
-        rot_transformed = rot_transformed.to(dtype=torch.float32) / 255.0
         mrcnn_target["masks"] = torch.stack([torch.tensor(arr) for arr in aug_data["masks"]])
         mrcnn_target["boxes"] = torch.as_tensor(boxes_list, dtype=torch.float32)
         
-        return mrcnn_transformed, mrcnn_target, rot_transformed, rot_target
+        return mrcnn_transformed, mrcnn_target, rot_target
     
     def _mask_to_bbox(self, binary_mask):
         """ Details """
