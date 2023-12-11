@@ -28,10 +28,10 @@ class Transforms():
         """ Detials """
         transforms = A.Compose([
             A.HorizontalFlip(p=0.5),
-            A.ToGray(p=0.2),
+            A.ToGray(p=0.1),
             A.Downscale(p=0.1),
             A.ColorJitter(p=0.2),
-            A.RandomBrightnessContrast(p=0.2)
+            A.RandomBrightnessContrast(p=0.3)
             #A.RandomResizedCrop(300, 300, p=0.1)
         ], p=1)
         return transforms

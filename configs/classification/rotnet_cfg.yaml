@@ -21,7 +21,7 @@ logs:
   iter_init: 0
   best_init: .inf
   step: *step
-  exp_dir: "rotnet_pt" 
+  exp_dir: "rotnet_bs32_500by500_centrecrop_augs" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -29,6 +29,7 @@ logs:
 
 model:
   model_name: *model_name
+  load_model: false
   params:
     backbone_type: pre-trained
     num_rotations: 4
@@ -48,7 +49,7 @@ dataset:
       train_val: 0.8
     num_rotations: 4
     train:
-      batch_size: 8
+      batch_size: 32
       shuffle: true
       num_workers: 0
       augmentations: true
