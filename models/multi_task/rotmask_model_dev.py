@@ -32,30 +32,43 @@ class RotNetHead(torch.nn.Module):
                  drop_out=0.5):
         super().__init__()
 
+        self.batch_norm = batch_norm
+        self.set_back = False
+
         self.avg_pooling = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)))
         self.fc_layers = nn.Sequential(nn.Linear(2048, 1000, bias=False))
         self.classifier = nn.Sequential(
             nn.Dropout() if drop_out > 0. else nn.Identity(),
-            nn.Linear(1000, 4096, bias=False if batch_norm else True),
-            nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
+            nn.Linear(1000, 4096, bias=False if self.batch_norm else True),
+            nn.BatchNorm1d(4096) if self.batch_norm else nn.Identity(),
             nn.ReLU(inplace=True),
             nn.Dropout() if drop_out > 0. else nn.Identity(),
-            nn.Linear(4096, 4096, bias=False if batch_norm else True),
-            nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
+            nn.Linear(4096, 4096, bias=False if self.batch_norm else True),
+            nn.BatchNorm1d(4096) if self.batch_norm else nn.Identity(),
             nn.ReLU(inplace=True),
             nn.Dropout() if drop_out > 0. else nn.Identity(),
-            nn.Linear(4096, 1000, bias=False if batch_norm else True),
-            nn.BatchNorm1d(1000) if batch_norm else nn.Identity(),
+            nn.Linear(4096, 1000, bias=False if self.batch_norm else True),
+            nn.BatchNorm1d(1000) if self.batch_norm else nn.Identity(),
             nn.ReLU(inplace=True),
             nn.Linear(1000, num_rots))
         self.classifier = nn.Sequential(*[child for child in self.classifier.children() if not isinstance(child, nn.Identity)])
 
     def forward(self, x):
         """ Details """ 
+
         x = self.avg_pooling(x)
         x = torch.flatten(x, start_dim=1)
         x = self.fc_layers(x)
-        x = self.classifier(x)
+
+        if x.size(0) == 1:
+            for module in self.classifier:
+                if isinstance(module, nn.BatchNorm1d):
+                    x = module.eval()(x)
+                else:
+                    x = module(x)
+        else:
+            x = self.classifier(x)
+
         return x
     
     @torch.jit.unused

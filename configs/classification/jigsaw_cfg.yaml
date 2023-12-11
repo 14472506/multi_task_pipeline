@@ -56,7 +56,7 @@ dataset:
         batch_size: 32
         shuffle: true
         num_workers: 0
-        augmentations: false
+        augmentations: true
       val:
         batch_size: 1
         shuffle: false
@@ -76,7 +76,7 @@ optimiser:
   model_name: *model_name
   opt_name: "Adam"
   opt_params:
-    lr: 0.00005 
+    lr: 0.0001 
   sched_name: "StepLR"
   sched_params:
     step: *step

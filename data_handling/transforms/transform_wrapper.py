@@ -44,63 +44,85 @@ class JigsawWrapper(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         """ Detials """
         image, label = self.dataset[idx]
-        aug_stack = []
-        
-        # loop through base stack
-        for i in image:
-            pil_trans = T.ToPILImage()
-            pil = pil_trans(i)
-            np_img = np.array(pil)
-            transformed = self.transforms(image=np_img)["image"]
-            transformed = torch.tensor(transformed)
-            transformed = transformed.to(dtype=torch.float32)
-            aug_stack.append(transformed)
-        
-        stack = torch.stack(aug_stack)
-        stack = stack.permute(0,3,1,2)
-        image = stack
-        
-        return(image, label) 
-
-        #tile_np = []
+        #aug_stack = []
+        #
         ## loop through base stack
         #for i in image:
         #    pil_trans = T.ToPILImage()
         #    pil = pil_trans(i)
         #    np_img = np.array(pil)
-        #    tile_np.append(np_img)
+        #    transformed = self.transforms(image=np_img)["image"]
+        #    transformed = torch.tensor(transformed)
+        #    transformed = transformed.to(dtype=torch.float32)
+        #    aug_stack.append(transformed)
         #
-        #transformed = self.transforms(image = tile_np[0],
-        #                              image0 = tile_np[1],
-        #                              image1 = tile_np[2],
-        #                              image2 = tile_np[3],
-        #                              image3 = tile_np[4],
-        #                              image4 = tile_np[5],
-        #                              image5 = tile_np[6],
-        #                              image6 = tile_np[7],
-        #                              image7 = tile_np[8])
+        #stack = torch.stack(aug_stack)
+        #stack = stack.permute(0,3,1,2)
+        #image = stack
         #
-        #auged_list = [
-        #    torch.tensor(transformed["image"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image0"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image1"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image2"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image3"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image4"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image5"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image6"]).to(dtype=torch.float32),
-        #    torch.tensor(transformed["image7"]).to(dtype=torch.float32),
-        #]
-        #
-        ##transformed = self.transforms(image=np_img)["image"]
-        ##transformed = torch.tensor(transformed)
-        ##transformed = transformed.to(dtype=torch.float32)
-        ##aug_stack.append(transformed)
-        #
-        #stack = torch.stack(auged_list)
-        #image = stack.permute(0,3,1,2)
-        #
-        #return(image, label)
+        #return(image, label) 
+
+        num_tiles = image.size(0)
+        whole_img = self._tiles_to_tensor(image, num_tiles)
+
+        pil_trans = T.ToPILImage()
+        pil = pil_trans(whole_img)
+        np_img = np.array(pil)
+        
+        transformed = self.transforms(image = np_img)
+
+        whole_tensor = torch.from_numpy(transformed["image"])
+        whole_tensor = whole_tensor.permute(2, 0, 1)
+        whole_tensor = whole_tensor.to(dtype=torch.float32) / 255
+        
+        image = self._tensor_to_tiles(whole_tensor, num_tiles, whole_tensor.size(2), whole_tensor.size(1))
+            
+        return(image, label)
+    
+    def _tiles_to_tensor(self, tensor, num_tiles):
+        """ Details """
+        num_tiles_per_dimension = int(np.sqrt(num_tiles))
+        full_col = None
+        count = 0
+        for i in range(num_tiles_per_dimension):
+            full_row = None
+            for j in range(num_tiles_per_dimension):
+                if full_row is None:
+                    full_row = tensor[count]
+                else:
+                    full_row = torch.cat((full_row, tensor[count]), dim=2) 
+                count += 1
+            if full_col is None:
+                full_col = full_row
+            else:
+                full_col = torch.cat((full_col, full_row), dim=1)  
+        
+        return full_col 
+    
+    def _tensor_to_tiles(self, tensor, num_tiles, width, height):
+        """ Detials """
+        # get tile constructors
+        num_tiles_per_dimension = int(np.sqrt(num_tiles))
+        width_tiles = width // num_tiles_per_dimension
+        height_tiles = height // num_tiles_per_dimension
+
+        tensor = tensor.squeeze(0)
+
+        tiles = []
+        for i in range(num_tiles_per_dimension):
+            for j in range(num_tiles_per_dimension):
+                
+                hmin =  i * height_tiles
+                hmax = (i+1) * height_tiles
+                wmin =  j * width_tiles
+                wmax = (j+1) * width_tiles
+
+                tile_ij = tensor[:, hmin: hmax, wmin: wmax]
+
+                tiles.append(tile_ij)
+        tiles = torch.stack(tiles)
+
+        return tiles
     
 
     def __len__(self):

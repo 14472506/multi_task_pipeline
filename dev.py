@@ -72,10 +72,8 @@ for j in range(sup_im.size(0)):
         axes[count].set_title(f"TILE_{count}")
         count += 1
 
-    name = str(j) + "_tile_img.png"
+    name = str(j) + "_auged_img.png"
 
     # Adjust layout and save the figure as a single image
     plt.tight_layout()
     plt.savefig(name)
-
-

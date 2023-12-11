@@ -94,7 +94,7 @@ class TestAction():
             model.eval()
 
             for i, data in enumerate(loader):
-                input, target = data
+                input, target, _ = data
                 input = list(image.to(device) for image in input)
         
                 with torch.autocast("cuda"):

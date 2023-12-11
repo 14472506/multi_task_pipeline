@@ -18,14 +18,24 @@ class Jigsaw(nn.Module):
 
         # TO BE IMPLEMENTED GENERALLY
         self.backbone = resnet50(weights=ResNet50_Weights)
-        self.twin_network = nn.Sequential(nn.Linear(1000, 512, bias=False),
-                                          nn.BatchNorm1d(512),
-                                          nn.ReLU(inplace=True))
+        self.twin_network = nn.Sequential(nn.Linear(1000, 2084, bias=False),
+                                          nn.BatchNorm1d(2048),
+                                          nn.ReLU(inplace=True),
+                                          nn.Dropout(p=0.5),)
         
-        self.classifier = nn.Sequential(nn.Linear(512*self.num_tiles, 4096, bias=False),
+        self.classifier = nn.Sequential(nn.Linear(1000*self.num_tiles, 4096, bias=False),
                                          nn.BatchNorm1d(4096),
                                          nn.ReLU(inplace=True),
-                                         nn.Linear(4096, self.num_permutations))
+                                         nn.Dropout(p=0.5),
+                                         nn.Linear(4096, 2048, bias=False),
+                                         nn.BatchNorm1d(2048),
+                                         nn.ReLU(inplace=True),
+                                         nn.Dropout(p=0.5),
+                                         nn.Linear(2048, 1024, bias=False),
+                                         nn.BatchNorm1d(1024),
+                                         nn.ReLU(inplace=True),
+                                         nn.Dropout(p=0.5),
+                                         nn.Linear(1024, self.num_permutations))
         
     def _extract_cfg(self):
         """ Detial """
@@ -38,7 +48,7 @@ class Jigsaw(nn.Module):
         device = x.device
         assert x.shape[1] == self.num_tiles
 
-        x = torch.stack([self.twin_network(self.backbone(tile)) for tile in x]).to(device)
+        x = torch.stack([self.backbone(tile) for tile in x]).to(device)
         x = torch.flatten(x, start_dim = 1)
         x = self.classifier(x)
 

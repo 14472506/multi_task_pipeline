@@ -22,7 +22,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "ROTMASK_TEST2" 
+  exp_dir: "rotmask_800x1333_bs1_bs8_no_awl_map_130" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -35,7 +35,7 @@ model:
     backbone_type: pre-trained
     num_rotations: *num_rotations
     drop_out: 0.5
-    batch_norm: false
+    batch_norm: true
     trainable_layers: 5
     num_classes: 2
     hidden_layers: 256
@@ -56,7 +56,7 @@ dataset:
     train:
       dir: train
       json: train.json
-      batch_size: [1, 1]
+      batch_size: [1, 8]
       shuffle: true
       num_workers: 0
       augmentations: true

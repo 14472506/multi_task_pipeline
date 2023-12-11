@@ -30,6 +30,8 @@ class Logs():
         self.last_model_title = self.cfg["last_title"]
         self.post_model_title = self.cfg["best_post_title"]
         self.pre_model_title = self.cfg["best_pre_title"]
+        self.val_post_model_title = "val_" + self.cfg["best_post_title"]
+        self.val_pre_model_title = "val_" + self.cfg["best_pre_title"]
         self.iter = self.cfg["iter_init"]
         self.best = self.cfg["best_init"]
         self.step = self.cfg["step"]
@@ -193,7 +195,9 @@ class Logs():
         path_mapper = {
             "last": os.path.join(self.models_path, self.last_model_title),
             "pre": os.path.join(self.models_path, self.pre_model_title),
-            "post": os.path.join(self.models_path, self.post_model_title)
+            "post": os.path.join(self.models_path, self.post_model_title),
+            "val_pre": os.path.join(self.models_path, self.val_pre_model_title),
+            "val_post": os.path.join(self.models_path, self.val_post_model_title)
         }
         checkpoint = {
             "epoch": epoch,
