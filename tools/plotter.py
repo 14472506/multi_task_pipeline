@@ -135,7 +135,7 @@ class Plotter():
         plt.plot(epochs, val_loss, label='Validation Loss')
 
         # Mark the best pre and post values
-        plt.scatter([pre_best_epoch, post_best_epoch], [pre_best_val, post_best_val], color='red')
+        plt.scatter([pre_best_epoch, post_best_epoch], [pre_best_val, post_best_val], color='red', s=1)
 
         # Updated annotation with best loss and epoch values
         for label, x, y, epoch, val in zip(['Pre Best', 'Post Best'], 

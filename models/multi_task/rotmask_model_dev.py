@@ -205,8 +205,8 @@ def rotmask_resnet50_fpn(cfg):
                     weights=False,
                     trainable_layers=trainable_layers)
     
-    if drop_out:
-        backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
+    #if drop_out:
+    #    backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
 
     model = RotMaskRCNN(backbone, num_classes, num_rots, batch_norm, drop_out, max_size=max_size, min_size=min_size)
     in_features = model.roi_heads.box_predictor.cls_score.in_features

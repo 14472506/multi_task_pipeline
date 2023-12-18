@@ -355,8 +355,10 @@ class Loaders():
         if self.type == "train":
 
             sup_train_dataset = combined_dataset_class(self.cfg, "train")
+            sup_val_dataset = combined_dataset_class(self.cfg, "val")
             self.cfg["source"] = 'data_handling/sources/jersey_dataset_v4'
-            sup_val_dataset = coco_class(self.cfg, "val")
+            sup_val_map_dataset = coco_class(self.cfg, "val")
+
             ssl_train_dataset = splits[0]
             ssl_val_dataset = splits[1]
 
@@ -376,14 +378,17 @@ class Loaders():
                 ssl_val_transforms_wrapper = wrappers(sub_model_type)
                 sup_val_dataset = sup_val_transforms_wrapper(sup_val_dataset, sup_val_transforms)
                 ssl_val_dataset = ssl_val_transforms_wrapper(ssl_val_dataset, ssl_val_transforms)
+                sup_val_map_dataset = sup_val_transforms_wrapper(sup_val_map_dataset, sup_val_transforms)
+                
                 print("train augs applied")
 
             sup_train_loader = self._create_dataloader(sup_train_dataset, self.train_bs[0], self.train_shuffle, self.train_workers, COCO_collate_function)
             ssl_train_loader = self._create_dataloader(ssl_train_dataset, self.train_bs[1], self.train_shuffle, self.train_workers, None)            
             sup_val_loader = self._create_dataloader(sup_val_dataset, self.val_bs[0], self.val_shuffle, self.val_workers, COCO_collate_function)
-            ssl_val_loader = self._create_dataloader(ssl_val_dataset, self.val_bs[1], self.val_shuffle, self.val_workers, None)            
+            sup_val_map_loader = self._create_dataloader(sup_val_map_dataset, self.val_bs[0], self.val_shuffle, self.val_workers, COCO_collate_function)
+            ssl_val_loader = self._create_dataloader(ssl_val_dataset, self.val_bs[1], self.val_shuffle, self.val_workers, None) 
             
-            return [sup_train_loader, ssl_train_loader], [sup_val_loader, ssl_val_loader] 
+            return [sup_train_loader, ssl_train_loader], [sup_val_loader, ssl_val_loader, sup_val_map_loader] 
 
     """ =========== Supporting Methods ========== """
 

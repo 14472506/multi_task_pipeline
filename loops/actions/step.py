@@ -272,11 +272,15 @@ class Step():
             # or: for i, (sup im, sup targ), (ssl_im, ssl_targ) in enumerate(zip(cycle(sup_loader))(ssl_loader))
 
             # while not sup_iter.end()
+
+            print(len(loader[0]))
                 
             for i in range(len(loader[0])):
                 sup_im, sup_target, sup_ssl_target = next(sup_iter)
-                #sup_im = sup_im[0].to(device) 
-                sup_im = list(image.to(device) for image in sup_im)
+                if self.model_name == "jigmask_multi_task":
+                    sup_im = sup_im[0].to(device)
+                else:
+                    sup_im = list(image.to(device) for image in sup_im)
                 sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
                 sup_ssl_target = sup_ssl_target[0].to(device)
 
@@ -307,10 +311,10 @@ class Step():
                     ssl_loss = ssl_loss.div_(secondar_grad * primary_grad)
                     
                     ssl_loss_acc += ssl_loss.item()
-                    #weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss)
+                    weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss)
           
                     #weighted_losses = awl(sup_loss, ssl_loss)
-                    weighted_losses = sup_loss + (2*ssl_loss)
+                    #weighted_losses = sup_loss + (2*ssl_loss)
 
                     weighted_losses_acc += weighted_losses.item()
                     pf_loss += weighted_losses.item()
@@ -365,9 +369,12 @@ class Step():
             
             # ssl step adjust goes here
             for i in range(len(loader[0])):
+
                 sup_im, sup_target, sup_ssl_target = next(sup_iter)
-                #sup_im = sup_im[0].to(device) 
-                sup_im = list(image.to(device) for image in sup_im)
+                if self.model_name == "jigmask_multi_task":
+                    sup_im = sup_im[0].to(device)
+                else:
+                    sup_im = list(image.to(device) for image in sup_im)
                 sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
                 sup_ssl_target = sup_ssl_target[0].to(device)
             
@@ -422,10 +429,20 @@ class Step():
             # set form map evaluation
             model.eval()
             metric = MeanAveragePrecision(iou_type = "segm")
-            sup_iter = iter(loader[0])
+            if self.model_name == "jigmask_multi_task":
+                loader_selector = 2
+            else:
+                loader_selector = 0
 
-            for i in range(len(loader[0])):
-                im_input, target, _ = next(sup_iter) # removed , _ for dev
+            sup_iter = iter(loader[loader_selector])
+
+            for i in range(len(loader[loader_selector])):
+
+                if self.model_name == "jigmask_multi_task":
+                    im_input = im_input, target = next(sup_iter)
+                else:
+                    im_input = im_input, target, _ = next(sup_iter)
+
                 im_input = list(image.to(device) for image in im_input)
         
                 with torch.autocast("cuda"):

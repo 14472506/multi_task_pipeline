@@ -23,7 +23,7 @@ logs:
   iter_init: 0
   best_init: .inf
   step: *step
-  exp_dir: "Jigsaw_bs32_500by500centre_crop_with_augs" 
+  exp_dir: "Jigsaw/bs16_run0" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -53,7 +53,7 @@ dataset:
         train_test: 0.8
         train_val: 0.8
       train:
-        batch_size: 32
+        batch_size: 16
         shuffle: true
         num_workers: 0
         augmentations: true
@@ -76,7 +76,7 @@ optimiser:
   model_name: *model_name
   opt_name: "Adam"
   opt_params:
-    lr: 0.0001 
+    lr: 0.00005 
   sched_name: "StepLR"
   sched_params:
     step: *step

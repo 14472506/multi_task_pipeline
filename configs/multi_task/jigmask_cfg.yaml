@@ -23,7 +23,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "JIGMASK_DEV" 
+  exp_dir: "JigMask/bs16_run0" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -37,7 +37,7 @@ model:
     num_tiles: *num_tiles
     num_permutations: *num_permutations
     drop_out: 0.5
-    batch_norm: false
+    batch_norm: true
     trainable_layers: 5
     num_classes: 2
     hidden_layers: 256
@@ -60,7 +60,7 @@ dataset:
     train:
       dir: train
       json: train.json
-      batch_size: [1, 2]
+      batch_size: [1, 4]
       shuffle: true
       num_workers: 0
       augmentations: false

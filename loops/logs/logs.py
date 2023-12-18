@@ -211,7 +211,9 @@ class Logs():
         path_mapper = {
             "last": os.path.join(self.models_path, self.last_model_title),
             "pre": os.path.join(self.models_path, self.pre_model_title),
-            "post": os.path.join(self.models_path, self.post_model_title)
+            "post": os.path.join(self.models_path, self.post_model_title),
+            "val_pre": os.path.join(self.models_path, self.val_pre_model_title),
+            "val_post": os.path.join(self.models_path, self.val_post_model_title)
         }
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #address this!
         checkpoint = torch.load(path_mapper[type], map_location=device)

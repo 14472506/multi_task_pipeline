@@ -21,7 +21,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "mrcnn_rotnet_pt_800x500_bs1_no_awl_map_130" 
+  exp_dir: "MaskRCNN/bsfinder" 
   sub_dir: "test_1"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -77,7 +77,7 @@ optimiser:
   model_name: *model_name
   opt_name: "Adam"
   opt_params:
-    lr: 0.00005 
+    lr: 0.00005
   sched_name: "StepLR"
   sched_params:
     step: *step

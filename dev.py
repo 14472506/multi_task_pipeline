@@ -1,77 +1,93 @@
-# Imports
-import torch
-from data_handling import Loaders
-from PIL import Image
-import numpy as np
-import random
-import matplotlib.pyplot as plt
+"""
+Module Detials:
+This module is a high level implementations of the training process for
+deep learning models. The train class which is imported by the main file
+uses the provided config dictionary to initialise the other modules used 
+for training. To execute model training the train method is called from 
+the main file.
+"""
+# imports
+# base packages
 import random
 
-# loader cfg
+# third party packages
+import torch
+import numpy as np
+
+# local packages
+from data_handling import Loaders
+
+from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+import cv2
+
+# loader_cfg
 loader_cfg = {
-    "source": "data_handling/sources/All_RGB",
+    "source": "data_handling/sources/jersey_dataset_v4",
     "random_seed": 42,
-    "model_name": "rotnet_resnet_50",
-    "col_fn": None,
-    "params": {
-        "col_fn": None,
-        "num_rotations": 4,
-        "split":{
-            "train_test": 0.8,
-            "train_val": 0.8,
-        },
+    "model_name": "mask_rcnn",
+    "col_fn": True,
+    "params":{
         "train":{
+            "dir": "train",
+            "json": "train.json",
             "batch_size": 1,
             "shuffle": True,
             "num_workers": 0,
-            "augmentations": True
-        },
-        "val": {
+            "augmentations": False},
+        "val":{
+            "dir": "val",
+            "json": "val.json",
             "batch_size": 1,
             "shuffle": False,
             "num_workers": 0,
-            "augmentations": False
-        },
-        "test": {
+            "augmentations": False},
+        "test":{
+            "dir": "test",
+            "json": "test.json",
             "batch_size": 1,
             "shuffle": False,
             "num_workers": 0,
-            "augmentations": False
-        },
-    },
+            "augmentations": False}}
 }
 
-# get loader
-train_loader, _ = Loaders(loader_cfg, "train").loader()
+def overlay_masks(image, target):
+    """
+    Overlay masks on the image.
 
-# get iterator
-loader_iterator = iter(train_loader)
+    :param image: Image tensor.
+    :param target: Target dictionary containing masks and other annotations.
+    :return: PIL Image with masks overlaid.
+    """
+    # Convert the tensor image to PIL for easy manipulation
+    image = image.squeeze().permute(1, 2, 0).numpy()
+    image = Image.fromarray((image * 255).astype(np.uint8))
 
-for i in range(20):
-    sup_im, sup_target = next(loader_iterator)
+    # Draw masks
+    fig, ax = plt.subplots(1)
+    ax.imshow(image)
 
-# Create a figure with 3x3 grid of subplots
-#fig, axes = plt.subplots(3, 3, figsize=(10, 10))
-#axes = axes.ravel()  # Flatten the array of axes
+    for i in range(len(target["masks"])):
+        mask = target["masks"][i].squeeze().numpy()
+        contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-for j in range(sup_im.size(0)):
-    count = 0
-    #for i in range(sup_im[0].size(0)):
-    #    image = sup_im[j][i, :, :, :]
-    
-    # Convert image tensor from CHW to HWC format and normalize
-    image = sup_im[j].permute(1, 2, 0)  # CHW to HWC
-    image = (image - image.min()) / (image.max() - image.min())  # Normalize
-    image = (image * 255).byte().numpy()  # Convert to 8-bit and to numpy array
+        for contour in contours:
+            polygon = patches.Polygon(contour.reshape(-1, 2), linewidth=1, edgecolor='r', facecolor='none')
+            ax.add_patch(polygon)
 
-    ## Display image in the corresponding subplot
-    #axes[count].imshow(image)
-    #axes[count].axis('off')  # Turn off axis
-    #axes[count].set_title(f"TILE_{count}")
-    #count += 1
+    # Save the figure to an image
+    fig.savefig(str(i) + "_overlayed_image.png", bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
 
-    name = str(j) + "_auged_img.png"
+if __name__ == "__main__":
+    # get loader
+    train_loader, val_loader = Loaders(loader_cfg, "train").loader()
 
-    # Adjust layout and save the figure as a single image
-    plt.tight_layout()
-    plt.savefig(name)
+    val_iter = iter(val_loader)
+
+    for i in range(len(val_loader)):
+        img, target = next(val_iter)
+
+        overlay_masks(img[0], target[0])

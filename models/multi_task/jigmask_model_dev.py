@@ -40,19 +40,36 @@ class JigsawHead(torch.nn.Module):
                                           nn.ReLU(inplace=True)
                                           )
         
-        self.classifier = nn.Sequential(nn.Linear(512*self.num_tiles, 4096, bias=False),
-                                         #nn.BatchNorm1d(4096),
+        self.classifier = nn.Sequential(nn.Linear(1000*self.num_tiles, 4096, bias=False),
+                                         nn.BatchNorm1d(4096),
                                          nn.ReLU(inplace=True),
-                                         nn.Linear(4096, self.num_permutations))
+                                         nn.Dropout(p=0.5),
+                                         nn.Linear(4096, 2048, bias=False),
+                                         nn.BatchNorm1d(2048),
+                                         nn.ReLU(inplace=True),
+                                         nn.Dropout(p=0.5),
+                                         nn.Linear(2048, 1024, bias=False),
+                                         nn.BatchNorm1d(1024),
+                                         nn.ReLU(inplace=True),
+                                         nn.Dropout(p=0.5),
+                                         nn.Linear(1024, self.num_permutations))
 
     def forward(self, x):
         """ Details """
-        x = torch.stack([self.twin_network(param) for param in x])
+
         x = x.permute(1, 0, 2)
         x = torch.flatten(x, start_dim=1)
-        x = self.classifier(x)
+
+        if x.size(0) == 1:
+            for module in self.classifier:
+                if isinstance(module, nn.BatchNorm1d):
+                    x = module.eval()(x)
+                else:
+                    x = module(x)
+        else:
+            x = self.classifier(x)
+
         return x
-    
 
 class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
     """
@@ -100,6 +117,7 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
         """
         # code for training execution
         if self.training:
+
             # if dimension is 4 and first dimension is the same as the number of tiles then it shoulds be a tile image and needs to be unsqueezer
             if images.dim() == 4:
                 if images.shape[0] == self.num_tiles:
@@ -297,8 +315,8 @@ def jigmask_resnet50_fpn(cfg):
                     weights=False,
                     trainable_layers=trainable_layers)
     
-    if drop_out:
-        backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
+    #if drop_out:
+    #    backbone.body.layer4.add_module("dropout", nn.Dropout(drop_out))
 
     model = JigMaskRCNN(backbone, num_classes, num_tiles, num_permutations, tile_max=tile_max, tile_minx=tile_min, max_size=max_size, min_size=min_size)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
