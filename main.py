@@ -14,6 +14,7 @@ import argparse
 import yaml
 from loops import Train, Test
 from tools import PseudoLabeller, Plotter
+import torch
 
 # main function
 def main(args):
@@ -44,9 +45,10 @@ def main(args):
             config["logs"]["sub_dir"] = amended_sub_dir
 
             # Execute training
-            if train_flag:
-                trainer = Train(config)
-                trainer.train()
+            with torch.cuda.device(config["loops"]["device"]):
+                if train_flag:
+                    trainer = Train(config)
+                    trainer.train()
 
             # Execute testing
             if test_flag:

@@ -9,7 +9,7 @@ defaults:
   seed: &seed 42
 
 loops:
-  device: "cuda:0"
+  device: "cuda:3"
   grad_acc: [1, 1]
   start: 0
   end: 130
@@ -22,7 +22,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "RotMask/bs16" 
+  exp_dir: "CUDA_TEST" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
