@@ -252,8 +252,6 @@ class Step():
             """ Detials """
             # loop execution setup
             model.train()
-
-            # supervised and self supervised loader extraction
             sup_iter = iter(loader[0])
 
             # losses
@@ -267,13 +265,9 @@ class Step():
             sup_loss_acc, sup_ssl_loss_acc, ssl_loss_acc, weighted_losses_acc, pf_loss = 0, 0, 0, 0, 0
 
             # Notes: Dont reset the iterator for the larger model at the begining of each epoch, only when the iterator runs out
-
             # note: for 1, 2 in zip(cycle(sup_loader, ssl_loader))
             # or: for i, (sup im, sup targ), (ssl_im, ssl_targ) in enumerate(zip(cycle(sup_loader))(ssl_loader))
-
             # while not sup_iter.end()
-
-            print(len(loader[0]))
                 
             for i in range(len(loader[0])):
                 sup_im, sup_target, sup_ssl_target = next(sup_iter)
@@ -287,6 +281,7 @@ class Step():
                 with autocast():
                     # forward pass
                     sup_output, sup_ssl_pred = model.forward(sup_im, sup_target) # model.forward(sup_im, sup_ssl_im, sup_target)
+                    
                     sup_loss = sum(loss for loss in sup_output.values())
                     ssl_loss = loss(sup_ssl_pred ,sup_ssl_target.unsqueeze(0))
                     #sup_loss /= primary_grad
@@ -294,10 +289,11 @@ class Step():
                     sup_loss_acc += sup_loss.item()
                     sup_ssl_loss_acc += ssl_loss.item()
                     
-                    for i in range(0, secondar_grad):
+                    acc_ssl_loss = 0
+                    for _ in range(0, secondar_grad):
                         try:
                             ssl_im, ssl_target = next(self.train_ssl_iter) 
-                        except StopIteration:
+                        except (StopIteration, AttributeError):
                             print("resetting iter")
                             self.train_ssl_iter = iter(loader[1])
                             ssl_im, ssl_target = next(self.train_ssl_iter)
@@ -306,20 +302,20 @@ class Step():
 
                         # forward pass
                         ssl_output = model.forward(ssl_im)
-                        ssl_loss += loss(ssl_output, ssl_target)
+                        acc_ssl_loss += loss(ssl_output, ssl_target).item()
 
-                    ssl_loss = ssl_loss.div_(secondar_grad * primary_grad)
+                    ssl_loss_total = (ssl_loss + acc_ssl_loss / secondar_grad) / primary_grad
                     
-                    ssl_loss_acc += ssl_loss.item()
-                    weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss)
+                    ssl_loss_acc += ssl_loss_total.item()
+                    weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss_total)
           
                     #weighted_losses = awl(sup_loss, ssl_loss)
                     #weighted_losses = sup_loss + (2*ssl_loss)
 
                     weighted_losses_acc += weighted_losses.item()
-                    pf_loss += weighted_losses.item()
-                                
-                scaler.scale(weighted_losses).backward()
+                    pf_loss += weighted_losses.item()                                
+                    scaler.scale(weighted_losses).backward()
+
                 if (i+1) % primary_grad == 0:
                     # optimiser step
                     scaler.step(optimiser)
@@ -391,7 +387,7 @@ class Step():
             
                 try:
                     ssl_im, ssl_target = next(self.val_ssl_iter) 
-                except StopIteration:
+                except (StopIteration, AttributeError):
                     print("resetting iter")
                     self.val_ssl_iter = iter(loader[1])
                     ssl_im, ssl_target = next(self.val_ssl_iter)
@@ -479,8 +475,8 @@ class Step():
 
         loss[0].to(device)
         scaler = torch.cuda.amp.GradScaler(enabled=True)
-        self.train_ssl_iter = iter(train_loader[1])
-        self.val_ssl_iter = iter(val_loader[1])
+        #self.train_ssl_iter = iter(train_loader[1])
+        #self.val_ssl_iter = iter(val_loader[1])
 
         print(banner)
         print(train_title)

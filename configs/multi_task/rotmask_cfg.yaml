@@ -9,7 +9,7 @@ defaults:
   seed: &seed 42
 
 loops:
-  device: "cuda:1"
+  device: "cuda:0"
   grad_acc: [1, 1]
   start: 0
   end: 130

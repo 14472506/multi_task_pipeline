@@ -1,93 +1,56 @@
-"""
-Module Detials:
-This module is a high level implementations of the training process for
-deep learning models. The train class which is imported by the main file
-uses the provided config dictionary to initialise the other modules used 
-for training. To execute model training the train method is called from 
-the main file.
-"""
-# imports
-# base packages
-import random
+def train(model, loader, loss_fun, optimiser, device, scaler, grad_acc, epoch, log, iter_count, logger):
+    model.train()
+    sup_iter = iter(loader[0])
 
-# third party packages
-import torch
-import numpy as np
+    awl = loss_fun[0]
+    loss = loss_fun[1]
 
-# local packages
-from data_handling import Loaders
+    primary_grad = grad_acc[0] if grad_acc else 1
+    secondar_grad = grad_acc[1] if grad_acc else 1
 
-from PIL import Image
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+    accumulated_loss = 0
 
-import cv2
+    for i in range(len(loader[0])):
+        sup_im, sup_target, sup_ssl_target = next(sup_iter)
+        if self.model_name == "jigmask_multi_task":
+            sup_im = sup_im[0].to(device)
+        else:
+            sup_im = [image.to(device) for image in sup_im]
+        sup_target = [{k: v.to(device) for k, v in t.items()} for t in sup_target]
+        sup_ssl_target = sup_ssl_target[0].to(device)
 
-# loader_cfg
-loader_cfg = {
-    "source": "data_handling/sources/jersey_dataset_v4",
-    "random_seed": 42,
-    "model_name": "mask_rcnn",
-    "col_fn": True,
-    "params":{
-        "train":{
-            "dir": "train",
-            "json": "train.json",
-            "batch_size": 1,
-            "shuffle": True,
-            "num_workers": 0,
-            "augmentations": False},
-        "val":{
-            "dir": "val",
-            "json": "val.json",
-            "batch_size": 1,
-            "shuffle": False,
-            "num_workers": 0,
-            "augmentations": False},
-        "test":{
-            "dir": "test",
-            "json": "test.json",
-            "batch_size": 1,
-            "shuffle": False,
-            "num_workers": 0,
-            "augmentations": False}}
-}
+        with autocast():
+            sup_output, sup_ssl_pred = model.forward(sup_im, sup_target)
+            sup_loss = sum(loss for loss in sup_output.values())
+            ssl_loss = loss(sup_ssl_pred, sup_ssl_target.unsqueeze(0))
 
-def overlay_masks(image, target):
-    """
-    Overlay masks on the image.
+            ssl_loss_accumulated = 0
+            for _ in range(secondar_grad):
+                try:
+                    ssl_im, ssl_target = next(self.train_ssl_iter)
+                except StopIteration:
+                    self.train_ssl_iter = iter(loader[1])
+                    ssl_im, ssl_target = next(self.train_ssl_iter)
+                ssl_im = ssl_im.to(device)
+                ssl_target = ssl_target.to(device)
 
-    :param image: Image tensor.
-    :param target: Target dictionary containing masks and other annotations.
-    :return: PIL Image with masks overlaid.
-    """
-    # Convert the tensor image to PIL for easy manipulation
-    image = image.squeeze().permute(1, 2, 0).numpy()
-    image = Image.fromarray((image * 255).astype(np.uint8))
+                ssl_output = model.forward(ssl_im)
+                ssl_loss_accumulated += loss(ssl_output, ssl_target)
 
-    # Draw masks
-    fig, ax = plt.subplots(1)
-    ax.imshow(image)
+            ssl_loss_total = (ssl_loss + ssl_loss_accumulated / secondar_grad) / primary_grad
+            accumulated_loss += ssl_loss_total.item()
 
-    for i in range(len(target["masks"])):
-        mask = target["masks"][i].squeeze().numpy()
-        contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss_total)
+            scaler.scale(weighted_losses).backward()
 
-        for contour in contours:
-            polygon = patches.Polygon(contour.reshape(-1, 2), linewidth=1, edgecolor='r', facecolor='none')
-            ax.add_patch(polygon)
+        if (i + 1) % primary_grad == 0:
+            scaler.step(optimiser)
+            scaler.update()
+            optimiser.zero_grad()
 
-    # Save the figure to an image
-    fig.savefig(str(i) + "_overlayed_image.png", bbox_inches='tight', pad_inches=0)
-    plt.close(fig)
+        if i % 10 == 0:  # Clear GPU memory less frequently
+            torch.cuda.empty_cache()
 
-if __name__ == "__main__":
-    # get loader
-    train_loader, val_loader = Loaders(loader_cfg, "train").loader()
+        iter_count += 1
 
-    val_iter = iter(val_loader)
-
-    for i in range(len(val_loader)):
-        img, target = next(val_iter)
-
-        overlay_masks(img[0], target[0])
+    logger.update_loss_stats(accumulated_loss / len(loader[0]), epoch)

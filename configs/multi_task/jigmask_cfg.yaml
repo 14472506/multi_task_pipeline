@@ -11,7 +11,7 @@ defaults:
 
 loops:
   device: "cuda:0"
-  grad_acc: [1, 1]
+  grad_acc: [1, 8]
   start: 0
   end: 130
   seed: *seed
@@ -60,7 +60,7 @@ dataset:
     train:
       dir: train
       json: train.json
-      batch_size: [1, 4]
+      batch_size: [1, 2]
       shuffle: true
       num_workers: 0
       augmentations: false
