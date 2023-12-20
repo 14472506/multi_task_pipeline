@@ -6,9 +6,10 @@ defaults:
   model_name: &model_name mask_rcnn
   step: &step 100
   seed: &seed 42
+  device: &device "cuda:2"
 
 loops:
-  device: "cuda:3"
+  device: *device
   grad_acc: 1
   start: 0
   end: 130
@@ -17,12 +18,12 @@ loops:
 logs:
   model_name: *model_name
   logger_type: basic
-  print_freq: 5
+  print_freq: 10
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "CUDA_TEST/" 
-  sub_dir: "test_1"
+  exp_dir: "RotNet_pt_MRCNN"
+  sub_dir: "Model 0"
   last_title: last_model.pth
   best_post_title: post_best.pth
   best_pre_title: pre_best.path
@@ -31,7 +32,7 @@ model:
   model_name: *model_name
   load_model: false
   params:
-    ssl_pt: "outputs/models/Jigsaw_bs32_500by500centre_crop_with_augs/model_0/pre_best.path"
+    ssl_pt: "outputs/models/RotNet/bs16_run0/model_0/pre_best.path"
     backbone_type: pre-trained
     trainable_layers: 5
     num_classes: 2
@@ -39,6 +40,7 @@ model:
     drop_out: 0.5
     min_size: 800
     max_size: 1333
+    device: *device
 
 dataset:
   source: data_handling/sources/jersey_dataset_v4

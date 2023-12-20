@@ -18,7 +18,8 @@ def maskrcnn_resnet50_fpn(cfg):
     num_classes = cfg["params"]["num_classes"]
     hidden_layers = cfg["params"]["hidden_layers"]
     drop_out = cfg["params"]["drop_out"]
-    pt_load = False#cfg["params"]["ssl_pt"]
+    pt_load = cfg["params"]["ssl_pt"]
+    device = cfg["params"]["device"]
 
     # backbone selecting
     if backbone_type == "pre-trained":
@@ -45,7 +46,7 @@ def maskrcnn_resnet50_fpn(cfg):
         print("loading ssl pre trained weights")
         print("loading :" + pt_load)
         
-        ssl_checkpoint = torch.load(pt_load)
+        ssl_checkpoint = torch.load(pt_load, device)
         ssl_state_dick = ssl_checkpoint["state_dict"]
         backbone_keys = [key for key in ssl_state_dick.keys() if key.startswith("backbone")]
         backbone_state_dict = {k: ssl_state_dick[k] for k in backbone_keys}
