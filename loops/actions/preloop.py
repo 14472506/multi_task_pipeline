@@ -12,8 +12,7 @@ class PreLoop():
         self.cfg = cfg
         self.model_name = self.cfg["model_name"]
         self.load_model = self.cfg["load_model"]
-        if self.load_model:
-            self.load_path = self.cfg["params"]["load_path"]
+        self.device = self.cfg["device"]
     
     def action(self):
         self.action_map = {
@@ -35,30 +34,47 @@ class PreLoop():
         print(title)
         print(banner)
 
-    def _instance_seg_action(self, model, cfg):
+    def _instance_seg_action(self, model, optimiser):
         """ Details """
         banner = "================================================================================"
         title = " Instance Seg Training "
 
-        # Load model weights here.
+        if self.load_model:
+            # Load model weights here.
+            checkpoint = torch.load(self.load_model, map_location=self.device)
+            model.load_state_dict(checkpoint["state_dict"])
 
+            for state in optimiser.state.values():
+                for k, v in state.items():
+                    if isinstance(v, torch.Tensor):
+                        state[k] = v.to(self.device)
+
+            print("model_loaded")
+            
         print(banner)
         print(title)
         print(banner)
     
     def _multitask_action(self, model, optimiser):
         """ Detials """
+        banner = "================================================================================"
+        title = " Multi Task Training "
 
         if self.load_model:
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            checkpoint = torch.load(self.load_path)
+            # Load model weights here.
+            checkpoint = torch.load(self.load_model, map_location=self.device)
             model.load_state_dict(checkpoint["state_dict"])
-            optimiser.load_state_dict(checkpoint['optimizer'])
 
             for state in optimiser.state.values():
                 for k, v in state.items():
                     if isinstance(v, torch.Tensor):
-                        state[k] = v.to(device)
+                        state[k] = v.to(self.device)
+
+            print("model_loaded")
+            
+        print(banner)
+        print(title)
+        print(banner)
 
         banner = "================================================================================"
         title = " Multi Task Training "

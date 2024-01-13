@@ -6,12 +6,12 @@ defaults:
   model_name: &model_name jigmask_multi_task
   step: &step 100
   num_tiles: &num_tiles 9
-  num_permutations: &num_permutations 100
+  num_permutations: &num_permutations 10
   seed: &seed 42
 
 loops:
   device: "cuda:0"
-  grad_acc: [1, 8]
+  grad_acc: [1, 1]
   start: 0
   end: 130
   seed: *seed
@@ -23,7 +23,7 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "JigMask/bs16_run0" 
+  exp_dir: "JigMask_RCNN" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
@@ -60,7 +60,7 @@ dataset:
     train:
       dir: train
       json: train.json
-      batch_size: [1, 2]
+      batch_size: [1, 4]
       shuffle: true
       num_workers: 0
       augmentations: false

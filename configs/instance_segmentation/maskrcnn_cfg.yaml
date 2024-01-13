@@ -4,15 +4,15 @@ meta_data:
 
 defaults: 
   model_name: &model_name mask_rcnn
-  step: &step 100
+  step: &step 1
   seed: &seed 42
-  device: &device "cuda:2"
+  device: &device "cuda:0"
 
 loops:
   device: *device
   grad_acc: 1
   start: 0
-  end: 130
+  end: 31
   seed: *seed
 
 logs:
@@ -22,17 +22,18 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "RotNet_pt_MRCNN"
+  exp_dir: "Mask_RCNN_Jigsaw/No_AWL"
   sub_dir: "Model 0"
   last_title: last_model.pth
   best_post_title: post_best.pth
-  best_pre_title: pre_best.path
+  best_pre_title: pre_best.pth
 
 model:
   model_name: *model_name
-  load_model: false
+  device: *device
+  load_model: outputs/models/Mask_RCNN_RotNet/No_AWL/model_0/pre_best.pth
   params:
-    ssl_pt: "outputs/models/RotNet/bs16_run0/model_0/pre_best.path"
+    ssl_pt: false
     backbone_type: pre-trained
     trainable_layers: 5
     num_classes: 2

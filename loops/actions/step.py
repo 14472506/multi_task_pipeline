@@ -187,38 +187,38 @@ class Step():
             if hasattr(model.backbone.body.layer4, "dropout"):
                 model.backbone.body.layer4.dropout.p = p
 
-            # set form map evaluation
-            model.eval()
-            metric = MeanAveragePrecision(iou_type = "segm")
-            sup_iter = iter(loader)
+            ## set form map evaluation
+            #model.eval()
+            #metric = MeanAveragePrecision(iou_type = "segm")
+            #sup_iter = iter(loader)
 
-            for i in range(len(loader)):
-                input, target = next(sup_iter)
-                input = list(image.to(device) for image in input)
+            #for i in range(len(loader)):
+            #    input, target = next(sup_iter)
+            #    input = list(image.to(device) for image in input)
         
-                with torch.autocast("cuda"):
-                    with torch.no_grad():
-                        predictions = model(input)
+            #    with torch.autocast("cuda"):
+            #        with torch.no_grad():
+            #            predictions = model(input)
 
-                masks_in = predictions[0]["masks"].detach().cpu()
-                masks_in = masks_in > 0.5
-                masks_in = masks_in.squeeze(1) 
-                targs_masks = target[0]["masks"].bool()
-                targs_masks = targs_masks.squeeze(1)  
-                preds = [dict(masks=masks_in, scores=predictions[0]["scores"].detach().cpu(), labels=predictions[0]["labels"].detach().cpu(),)]
-                targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
-                metric.update(preds, targs)
+            #    masks_in = predictions[0]["masks"].detach().cpu()
+            #    masks_in = masks_in > 0.5
+            #    masks_in = masks_in.squeeze(1) 
+            #    targs_masks = target[0]["masks"].bool()
+            #    targs_masks = targs_masks.squeeze(1)  
+            #    preds = [dict(masks=masks_in, scores=predictions[0]["scores"].detach().cpu(), labels=predictions[0]["labels"].detach().cpu(),)]
+            #    targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
+            #    metric.update(preds, targs)
 
-                del predictions, input, target, masks_in, targs_masks, preds, targs
-                torch.cuda.empty_cache()
+            #    del predictions, input, target, masks_in, targs_masks, preds, targs
+            #    torch.cuda.empty_cache()
             
-            res = metric.compute()
-            map = res["map"].item()
+            #res = metric.compute()
+            #map = res["map"].item()
 
             loss = loss_acc/len(loader)
-            logger.val_loop_reporter(epoch, device, map)
+            logger.val_loop_reporter(epoch, device, loss)
             log["val_loss"].append(loss)
-            log["map"].append(map)
+            #log["map"].append(map)
                 
         # initial params
         banner = "--------------------------------------------------------------------------------"
@@ -283,13 +283,12 @@ class Step():
                     sup_output, sup_ssl_pred = model.forward(sup_im, sup_target) # model.forward(sup_im, sup_ssl_im, sup_target)
                     
                     sup_loss = sum(loss for loss in sup_output.values())
-                    ssl_loss = loss(sup_ssl_pred ,sup_ssl_target.unsqueeze(0))
+                    sup_ssl_loss = loss(sup_ssl_pred ,sup_ssl_target.unsqueeze(0))
                     #sup_loss /= primary_grad
 
                     sup_loss_acc += sup_loss.item()
-                    sup_ssl_loss_acc += ssl_loss.item()
+                    sup_ssl_loss_acc += sup_ssl_loss.item()
                     
-                    acc_ssl_loss = 0
                     for _ in range(0, secondar_grad):
                         try:
                             ssl_im, ssl_target = next(self.train_ssl_iter) 
@@ -302,9 +301,9 @@ class Step():
 
                         # forward pass
                         ssl_output = model.forward(ssl_im)
-                        acc_ssl_loss += loss(ssl_output, ssl_target).item()
+                        ssl_loss = loss(ssl_output, ssl_target)
 
-                    ssl_loss_total = (ssl_loss + acc_ssl_loss / secondar_grad) / primary_grad
+                    ssl_loss_total = (sup_ssl_loss + ssl_loss) / 2 
                     
                     ssl_loss_acc += ssl_loss_total.item()
                     weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss_total)
@@ -327,11 +326,10 @@ class Step():
                 iter_count += 1
 
                 # Clear GPU Memory
-                del sup_im, sup_target, sup_ssl_target, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im ,sup_output, sup_ssl_pred
+                #del sup_im, sup_target, sup_ssl_target, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im ,sup_output, sup_ssl_pred
                 torch.cuda.empty_cache()
                 gc.collect()
 
-            print(awl.params)
             # accumulating iter count for ssl iter adjust
             log["iter_accume"] += iter_count*secondar_grad
 
@@ -365,7 +363,6 @@ class Step():
             
             # ssl step adjust goes here
             for i in range(len(loader[0])):
-
                 sup_im, sup_target, sup_ssl_target = next(sup_iter)
                 if self.model_name == "jigmask_multi_task":
                     sup_im = sup_im[0].to(device)
@@ -381,7 +378,7 @@ class Step():
                     sup_ssl_loss = loss(sup_ssl_output, sup_ssl_target.unsqueeze(0))
                     sup_loss /= primary_grad
                     sup_ssl_loss /= primary_grad
-            
+        
                     sup_loss_acc += sup_loss.item()
                     sup_ssl_loss_acc += sup_ssl_loss.item()
             
@@ -391,6 +388,7 @@ class Step():
                     print("resetting iter")
                     self.val_ssl_iter = iter(loader[1])
                     ssl_im, ssl_target = next(self.val_ssl_iter)
+
                 ssl_im = ssl_im.to(device)
                 ssl_target = ssl_target.to(device)
             
@@ -399,16 +397,18 @@ class Step():
                     ssl_loss = loss(ssl_output, ssl_target)
             
                     # combining sup_ssl and ssl losses
-                    ssl_loss + sup_ssl_loss 
+                    #ssl_loss + sup_ssl_loss 
                     ssl_loss = ssl_loss.div_(secondar_grad * primary_grad)
             
                     ssl_loss_acc += ssl_loss.item()
                     weighted_losses = awl(sup_output["loss_classifier"], sup_output["loss_box_reg"], sup_output["loss_mask"], sup_output["loss_objectness"], sup_output["loss_rpn_box_reg"], ssl_loss)
                     #weighted_losses = awl(sup_loss, ssl_loss)
+                    #weighted_losses = sup_loss + ssl_loss
+                    #weighted_losses = ssl_loss
                     weighted_losses_acc += weighted_losses.item()
             
                 # Clear GPU Memory
-                del sup_im, sup_target, sup_ssl_target, sup_output, sup_ssl_output, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im
+                #del sup_im, sup_target, sup_ssl_target, sup_output, sup_ssl_output, ssl_loss, weighted_losses, ssl_output, ssl_target, ssl_im
                 torch.cuda.empty_cache()
                 gc.collect()
             
@@ -422,51 +422,51 @@ class Step():
             if hasattr(model.backbone.body.layer4, "dropout"):
                 model.backbone.body.layer4.dropout.p = p
              
-            # set form map evaluation
-            model.eval()
-            metric = MeanAveragePrecision(iou_type = "segm")
-            if self.model_name == "jigmask_multi_task":
-                loader_selector = 2
-            else:
-                loader_selector = 0
-
-            sup_iter = iter(loader[loader_selector])
-
-            for i in range(len(loader[loader_selector])):
-
-                if self.model_name == "jigmask_multi_task":
-                    im_input = im_input, target = next(sup_iter)
-                else:
-                    im_input = im_input, target, _ = next(sup_iter)
-
-                im_input = list(image.to(device) for image in im_input)
-        
-                with torch.autocast("cuda"):
-                    with torch.no_grad():
-                        predictions = model(im_input)
-
-                masks_in = predictions[0]["masks"].detach().cpu()
-                masks_in = masks_in > 0.5
-                masks_in = masks_in.squeeze(1) 
-                targs_masks = target[0]["masks"].bool()
-                targs_masks = targs_masks.squeeze(1)  
-                preds = [dict(masks=masks_in, scores=predictions[0]["scores"].detach().cpu(), labels=predictions[0]["labels"].detach().cpu(),)]
-                targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
-                metric.update(preds, targs)
-
-                del predictions, im_input, target, masks_in, targs_masks, preds, targs
-                torch.cuda.empty_cache()
-            
-            res = metric.compute()
-            map = res["map"].item()
+            ## set form map evaluation
+            #model.eval()
+            #metric = MeanAveragePrecision(iou_type = "segm")
+            #if self.model_name == "jigmask_multi_task":
+            #    loader_selector = 2
+            #else:
+            #    loader_selector = 0
+            #
+            #sup_iter = iter(loader[loader_selector])
+            #
+            #for i in range(len(loader[loader_selector])):
+            #
+            #    if self.model_name == "jigmask_multi_task":
+            #        im_input = im_input, target = next(sup_iter)
+            #    else:
+            #        im_input = im_input, target, _ = next(sup_iter)
+            #
+            #    im_input = list(image.to(device) for image in im_input)
+            #
+            #    with torch.autocast("cuda"):
+            #        with torch.no_grad():
+            #            predictions = model(im_input)
+            #
+            #    masks_in = predictions[0]["masks"].detach().cpu()
+            #    masks_in = masks_in > 0.5
+            #    masks_in = masks_in.squeeze(1) 
+            #    targs_masks = target[0]["masks"].bool()
+            #    targs_masks = targs_masks.squeeze(1)  
+            #    preds = [dict(masks=masks_in, scores=predictions[0]["scores"].detach().cpu(), labels=predictions[0]["labels"].detach().cpu(),)]
+            #    targs = [dict(masks=targs_masks, labels=target[0]["labels"],)]
+            #    metric.update(preds, targs)
+            #
+            #    #del predictions, im_input, target, masks_in, targs_masks, preds, targs
+            #    torch.cuda.empty_cache()
+            #
+            #res = metric.compute()
+            #map = res["map"].item()
 
             # adjusting val iter accumulation for ssl step adjust
             log["val_it_accume"] += len(loader[0])
 
             #logging
-            log["map"].append(map)
+            #log["map"].append(map)
             
-            logger.val_loop_reporter(epoch, device, log["map"][-1])
+            logger.val_loop_reporter(epoch, device, log["val_loss"][-1])
 
         # initial params
         banner = "--------------------------------------------------------------------------------"
@@ -475,8 +475,6 @@ class Step():
 
         loss[0].to(device)
         scaler = torch.cuda.amp.GradScaler(enabled=True)
-        #self.train_ssl_iter = iter(train_loader[1])
-        #self.val_ssl_iter = iter(val_loader[1])
 
         print(banner)
         print(train_title)

@@ -57,7 +57,7 @@ class JigsawHead(torch.nn.Module):
     def forward(self, x):
         """ Details """
 
-        x = x.permute(1, 0, 2)
+        #x = x.permute(1, 0, 2)
         x = torch.flatten(x, start_dim=1)
 
         if x.size(0) == 1:
@@ -140,78 +140,98 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
             # init acc loss count for tiles
             acc_loss_count = 0
 
-            # images will be of 5 dimensions with the first being of the batch size. this must be iterated through
-            for batch_idx in range(images.shape[0]):
-                # select the image for the batch index
-                image = images[batch_idx]
+            ## images will be of 5 dimensions with the first being of the batch size. this must be iterated through
+            #for batch_idx in range(images.shape[0]):
+            #    # select the image for the batch index
+            #    image = images[batch_idx]
+                
                 # if images is tiled image.
-                if image.shape[0] == self.num_tiles:
-                    if targets is None:
-                        # TODO Make seperate method
-                        feature_stack = []
-                        for i in range(self.num_tiles):
-                            img = [image[i]]
-                            img, _ = self.tile_transform(img)
-                            part_features = self.backbone.body(img.tensors)                            
+                #if image.shape[1] == self.num_tiles:
+            
+            
+            if targets is None:
+                # TODO Make seperate method
+                device = images.device
+                images = list(image.to(device) for image in images)
+
+                stack_1 = []
+                for image in images:
+                    stack_2 = []
+                    for tile in image:
+                        tile, _ = self.tile_transform([tile])
+                        stack_2.append(tile.tensors.squeeze())
+                    image_tensor = torch.stack(stack_2)
+                    stack_1.append(image_tensor)
+                images_tensor = torch.stack(stack_1).to(device)
+
+                part_features = torch.stack([self.jig_fc_layers(torch.flatten(self.jig_avg_pooling(self.backbone.body(tile)["3"]), start_dim=1)) for tile in images_tensor])
+                jig_pred_tensor = self.self_supervised_head(part_features)
+
+                #for i in range(self.num_tiles):
+                #    img = [image[i]]
+                #    img, _ = self.tile_transform(img)
+                #    part_features = self.backbone.body(img.tensors)                            
+                #    part_features = self.jig_avg_pooling(part_features["3"])
+                #    part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
+                #    feature_stack.append(part_features)
+                #jig_features = torch.stack(feature_stack) 
+                #jig_pred = self.self_supervised_head(jig_features)
+                #jig_pred_list.append(jig_pred)
+        
+            else:
+
+                for image in images:
+
+                    ext_inputs = self._tile_processing(image, targets)
+                    feature_stack = []
+                    count = 0
+
+                    for i, tile in enumerate(image):
+                        if i in ext_inputs["tile_idx"]:
+
+                            targets[0]["masks"] = ext_inputs["tile_masks"][count]
+                            targets[0]["boxes"] = ext_inputs["tile_boxes"][count]
+                            targets[0]["labels"] = ext_inputs["tile_labels"][count]
+                            # glorified resize 
+                            tile, targets = self.tile_transform([tile], targets)
+
+                            part_features = self.backbone.body(tile.tensors)
+                            features = self.backbone.fpn(part_features)
+
                             part_features = self.jig_avg_pooling(part_features["3"])
                             part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
                             feature_stack.append(part_features)
-                        jig_features = torch.stack(feature_stack) 
-                        jig_pred = self.self_supervised_head(jig_features)
-                        jig_pred_list.append(jig_pred)
-                
-                    else:
-                        image = [image]
-                        ext_inputs = self._tile_processing(image, targets)
-                        feature_stack = []
-                        count = 0
 
-                        for i in range(self.num_tiles):
-                            if i in ext_inputs["tile_idx"]:
-                                img = [image[0][i]]
-      
-                                targets[0]["masks"] = ext_inputs["tile_masks"][count]
-                                targets[0]["boxes"] = ext_inputs["tile_boxes"][count]
-                                targets[0]["labels"] = ext_inputs["tile_labels"][count]
-                                # glorified resize 
-                                img, targets = self.tile_transform(img, targets)
-                        
-                                part_features = self.backbone.body(img.tensors)
-                                features = self.backbone.fpn(part_features)
+                            if isinstance(features, torch.Tensor):
+                                features = OrderedDict([("0", features)])
 
-                                part_features = self.jig_avg_pooling(part_features["3"])
-                                part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
-                                feature_stack.append(part_features)
+                            proposals, proposal_losses = self.rpn(tile, features, targets)
 
-                                if isinstance(features, torch.Tensor):
-                                    features = OrderedDict([("0", features)])
+                            detections, detector_losses = self.roi_heads(features, proposals, tile.image_sizes, targets)
 
-                                proposals, proposal_losses = self.rpn(img, features, targets)
+                            losses = {}
+                            losses.update(detector_losses)
+                            losses.update(proposal_losses)
 
-                                detections, detector_losses = self.roi_heads(features, proposals, img.image_sizes, targets)
+                            for key in acc_losses.keys():
+                                acc_losses[key] += losses.get(key, 0)
+                            acc_loss_count += 1
+                            count += 1
+                        else:                            
+                            tile, _ = self.tile_transform([tile])
+                            part_features = self.backbone.body(tile.tensors)                            
+                            part_features = self.jig_avg_pooling(part_features["3"])
+                            part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
+                            feature_stack.append(part_features) 
 
-                                losses = {}
-                                losses.update(detector_losses)
-                                losses.update(proposal_losses)
+                    jig_features = torch.stack(feature_stack) 
+                    jig_features =  jig_features.permute(1,0,2)
+                    jig_pred = self.self_supervised_head(jig_features)
+                    jig_pred_list.append(jig_pred)
 
-                                for key in acc_losses.keys():
-                                    acc_losses[key] += losses.get(key, 0)
-                                acc_loss_count += 1
-                                count += 1
+                jig_pred_tensor = torch.stack(jig_pred_list)
+                jig_pred_tensor = jig_pred_tensor.squeeze(1)
 
-                            else:
-                                img = [image[0][i]]
-                                img, _ = self.tile_transform(img)
-                                part_features = self.backbone.body(img.tensors)                            
-                                part_features = self.jig_avg_pooling(part_features["3"])
-                                part_features = self.jig_fc_layers(torch.flatten(part_features, start_dim=1))
-                                feature_stack.append(part_features)                                  
-                        jig_features = torch.stack(feature_stack)    
-                        jig_pred = self.self_supervised_head(jig_features)
-                        jig_pred_list.append(jig_pred)
-
-                    jig_pred_tensor = torch.stack(jig_pred_list)
-                    jig_pred_tensor = jig_pred_tensor.squeeze(1)
             if targets is None:
                 return jig_pred_tensor
             else:
@@ -252,6 +272,7 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
             
     def _tile_processing(self, images, targets):
         """ Detials """
+
         ext_inputs = {
             "tile_idx": [],
             "tile_masks": [],
@@ -260,6 +281,8 @@ class JigMaskRCNN(torchvision.models.detection.MaskRCNN):
         }
 
         device = images[0].device
+        images = images.unsqueeze(0)
+
 
         for image, target in zip(images, targets):
             for tile_id in range(image.shape[0]):

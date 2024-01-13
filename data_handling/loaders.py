@@ -334,8 +334,8 @@ class Loaders():
 
         if self.type == "test":
 
-            self.cfg["source"] = 'data_handling/sources/jersey_dataset_v4'
-            sup_test_dataset = coco_class(self.cfg, "test")
+            mod_cfg["source"] = 'data_handling/sources/jersey_dataset_v4'
+            sup_test_dataset = coco_class(mod_cfg, "test")
             ssl_test_dataset = splits[0]
 
             if self.test_augs:
@@ -356,8 +356,8 @@ class Loaders():
 
             sup_train_dataset = combined_dataset_class(self.cfg, "train")
             sup_val_dataset = combined_dataset_class(self.cfg, "val")
-            self.cfg["source"] = 'data_handling/sources/jersey_dataset_v4'
-            sup_val_map_dataset = coco_class(self.cfg, "val")
+            mod_cfg["source"] = 'data_handling/sources/jersey_dataset_v4'
+            sup_val_map_dataset = coco_class(mod_cfg, "val")
 
             ssl_train_dataset = splits[0]
             ssl_val_dataset = splits[1]

@@ -55,8 +55,7 @@ class COCOJigsawDataset(data.Dataset):
         # select random permutation and generate rotation ground truth
         permutation_index = np.random.randint(0, self.num_perms)
         permutation = torch.tensor(self.permutations[permutation_index])
-        stack_target = torch.zeros(self.num_perms)
-        stack_target[permutation_index] = 1
+        stack_target = torch.tensor(permutation_index)
 
         # get instance ground truth
         mrcnn_targets = self._coco_target_collection(img_id, idx)

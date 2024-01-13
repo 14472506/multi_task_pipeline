@@ -15,6 +15,7 @@ import yaml
 from loops import Train, Test
 from tools import PseudoLabeller, Plotter
 import torch
+import re
 
 # main function
 def main(args):
@@ -41,20 +42,27 @@ def main(args):
         # Loop over the number of loop iterations
         for i in range(iterations):
             # Modify experiment subdirectory
+            initial_sub_dir = config["logs"]["sub_dir"]
             amended_sub_dir = "model_" + str(i)
             config["logs"]["sub_dir"] = amended_sub_dir
+            config["logs"]["best_init"] = [float("inf"), 0]
+
+            if config["model"]["load_model"]:
+                new_string = re.sub(amended_sub_dir, amended_sub_dir, config["model"]["load_model"])
+                config["model"]["load_model"] = new_string
+                print(new_string)
 
             # Execute training
             with torch.cuda.device(config["loops"]["device"]):
                 if train_flag:
                     trainer = Train(config)
                     trainer.train()
-
+#
             # Execute testing
             if test_flag:
                 tester = Test(config)
                 tester.test()
-
+#
             # carry out plotting
             if plot_flag:
                 plotter = Plotter(config)

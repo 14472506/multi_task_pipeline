@@ -4,15 +4,16 @@ meta_data:
 
 defaults: 
   model_name: &model_name rotmask_multi_task
-  step: &step 100
+  step: &step 1
   num_rotations: &num_rotations 4
   seed: &seed 42
+  device: &device "cuda:0"
 
 loops:
-  device: "cuda:0"
+  device: *device
   grad_acc: [1, 1]
   start: 0
-  end: 130
+  end: 31
   seed: *seed
 
 logs:
@@ -22,15 +23,16 @@ logs:
   iter_init: 0
   best_init: [.inf, 0]
   step: *step
-  exp_dir: "RotMask/run_0" 
+  exp_dir: "RotMask_RCNN" 
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
-  best_pre_title: pre_best.pth
+  best_pre_title: desregard.pth
 
 model:
   model_name: *model_name
-  load_model: false
+  load_model: outputs/models/RotMask_RCNN/model_0/pre_best.pth
+  device: *device
   params:
     backbone_type: pre-trained
     num_rotations: *num_rotations

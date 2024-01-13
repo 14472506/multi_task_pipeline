@@ -76,8 +76,8 @@ class JigsawDataset(data.Dataset):
         y.append(permutation_index)
 
         # generate ground truth label
-        label = torch.zeros(self.num_permutations)
-        label[y] = 1
+        label = torch.tensor(permutation_index)
+        #label[y] = 1
 
         # return tiles and ground truth label
         return tiles, label 
