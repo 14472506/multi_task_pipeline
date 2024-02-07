@@ -276,17 +276,3 @@ class PseudoLabeller():
         file_title = str(init_id) + "_" + str(img_id) + "_img_labels.json"
         with open(file_title, "w") as file:
             json.dump(data, file)
-
-
-
-    
-
-
-
-
-
-            
-            
-
-
-

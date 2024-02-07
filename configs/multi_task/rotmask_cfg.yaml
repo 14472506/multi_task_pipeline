@@ -27,11 +27,11 @@ logs:
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
-  best_pre_title: desregard.pth
+  best_pre_title: pre_best.pth
 
 model:
   model_name: *model_name
-  load_model: outputs/models/RotMask_RCNN/model_0/pre_best.pth
+  load_model: false
   device: *device
   params:
     backbone_type: pre-trained

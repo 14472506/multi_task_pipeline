@@ -229,14 +229,14 @@ class Logs():
 
     def save_results(self, dict):
         """ Detials """
-        results_title = "results.json"
+        results_title = "extended_results.json"
         results_root = os.path.join(self.result_path, results_title)
         with open(results_root, "w") as results_file:
             json.dump(dict, results_file)
 
     def load_results(self):
         """ Detials """
-        results_title = "results.json"
+        results_title = "extended_results.json"
         results_root = os.path.join(self.result_path, results_title)
         with open(results_root) as results_file:
             output = json.load(results_file)

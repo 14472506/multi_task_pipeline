@@ -8,12 +8,13 @@ defaults:
   num_tiles: &num_tiles 9
   num_permutations: &num_permutations 10
   seed: &seed 42
+  device: &device "cuda:0"
 
 loops:
-  device: "cuda:0"
+  device: *device
   grad_acc: [1, 1]
   start: 0
-  end: 130
+  end: 30
   seed: *seed
 
 logs:
@@ -27,11 +28,12 @@ logs:
   sub_dir: "model_0"
   last_title: last_model.pth
   best_post_title: post_best.pth
-  best_pre_title: pre_best.pth
+  best_pre_title: post_best.pth
 
 model:
   model_name: *model_name
-  load_model: false
+  load_model: outputs/models/JigMask_RCNN/model_0/pre_best.pth
+  device: *device
   params:
     backbone_type: pre-trained
     num_tiles: *num_tiles
@@ -87,7 +89,7 @@ optimiser:
   model_name: *model_name
   opt_name: "Adam"
   opt_params:
-    lr: 0.00005 
+    lr: 0.000005 
   sched_name: "StepLR"
   sched_params:
     step: *step

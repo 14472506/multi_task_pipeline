@@ -9,6 +9,7 @@ import os
 import numpy as np
 from .coco_eval_files.coco_evaluation import evaluate
 import gc
+import pickle
 
 # class
 class TestAction():
@@ -38,7 +39,7 @@ class TestAction():
         def mAP_eval(model, loader, logger, device, eval_type="segm", model_type="pre"):
             """ Details """
             # init eval
-            metric = MeanAveragePrecision(iou_type = eval_type)
+            metric = MeanAveragePrecision(iou_type = eval_type, extended_summary = True)
             logger.load_model(model, model_type)
             model.eval()
 
@@ -67,15 +68,19 @@ class TestAction():
             return res
 
         results = {}
-        pre_mAP = mAP_eval(model, loader, logger, device, eval_type="segm", model_type="pre")
-        pre_mAP = self._convert_to_dict(pre_mAP)
-        print(pre_mAP)
-        results["pre_step"] = pre_mAP
+        #pre_mAP = mAP_eval(model, loader, logger, device, eval_type="segm", model_type="pre")
+        #pre_mAP = self._convert_to_dict(pre_mAP)
+        #print(pre_mAP)
+        #results["pre_step"] = pre_mAP
         if step:
             post_mAP = mAP_eval(model, loader, logger, device, eval_type="segm", model_type="post")
-            post_mAP = self._convert_to_dict(post_mAP)
+        #    post_mAP = self._convert_to_dict(post_mAP)
             results["post_step"] = post_mAP
-        logger.save_results(results)
+        #logger.save_results(results)
+
+
+        with open('Jigsaw_pt_extended_results.pkl', 'wb') as f:
+            pickle.dump(results, f)        
 
     def _convert_to_dict(self, dict):
         """ Detials """
@@ -89,7 +94,7 @@ class TestAction():
         def mAP_eval(model, loader, logger, device, eval_type="segm", model_type="pre"):
             """ Details """
             # init eval
-            metric = MeanAveragePrecision(iou_type = eval_type)
+            metric = MeanAveragePrecision(iou_type = eval_type, extended_summary = True)
             logger.load_model(model, model_type)
             model.eval()
 
@@ -118,15 +123,21 @@ class TestAction():
             return res
         
         results = {}
-        pre_mAP = mAP_eval(model, loader[0], logger, device, eval_type="segm", model_type="pre")
-        pre_mAP = self._convert_to_dict(pre_mAP)
-        print(pre_mAP)
-        results["pre_step"] = pre_mAP
+        #pre_mAP = mAP_eval(model, loader[0], logger, device, eval_type="segm", model_type="pre")
+        ##pre_mAP = self._convert_to_dict(pre_mAP)
+        #print(pre_mAP)
+        #results["pre_step"] = pre_mAP
         if step:
             post_mAP = mAP_eval(model, loader[0], logger, device, eval_type="segm", model_type="post")
-            post_mAP = self._convert_to_dict(post_mAP)
+            #print(post_mAP)
+            #post_mAP = self._convert_to_dict(post_mAP)
             results["post_step"] = post_mAP
-        logger.save_results(results)
+        print(post_mAP)
+        #logger.save_results(results)
+
+
+        with open('rotmask_extended_results.pkl', 'wb') as f:
+            pickle.dump(results, f)
 
     ################################
 
